@@ -1,0 +1,7 @@
+[package]
+name = "nullwarden-fuzz"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nullwarden-core = { path = "../nullwarden-core" }

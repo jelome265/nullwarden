@@ -1,0 +1,12 @@
+name: fuzz
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p nullwarden-fuzz

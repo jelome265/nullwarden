@@ -1,0 +1,10 @@
+/target
+/.env
+/.sqlx
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.log
+/.idea
+/.vscode

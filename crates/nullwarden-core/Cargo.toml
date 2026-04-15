@@ -1,0 +1,17 @@
+[package]
+name = "nullwarden-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+argon2 = "0.5"
+chacha20poly1305 = { version = "0.10", features = ["std"] }
+rand = "0.8"
+rmp-serde = "1.1"
+serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+zeroize = { version = "1.7", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"
