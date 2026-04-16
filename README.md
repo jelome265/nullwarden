@@ -1767,4 +1767,3 @@ Migration procedure: `nullwarden migrate` command reads vault at version N, decr
 *Classification: Internal Engineering*  
 *Generated: 2026-04-15*  
 *Next review: Upon M1 milestone (Week 4)*
-# nullwarden

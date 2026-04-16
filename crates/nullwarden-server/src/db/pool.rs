@@ -1,14 +1,15 @@
 use crate::config::Config;
+use sqlx::PgPool;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 use tokio::sync::RwLock;
 use uuid::Uuid;
+use tracing::warn;
 
 pub type SharedState = Arc<AppState>;
-
-#[derive(Debug, Clone)]
+n#[derive(Debug, Clone)]
 pub struct StoredUser {
     pub id: Uuid,
     pub username: String,
@@ -21,21 +22,19 @@ pub struct StoredVault {
     pub version: u64,
     pub blob: Vec<u8>,
 }
-
 pub struct AppState {
     pub config: Config,
-    pub users: RwLock<HashMap<String, StoredUser>>,
-    pub refresh_tokens: RwLock<HashSet<String>>,
-    pub vaults: RwLock<HashMap<Uuid, StoredVault>>,
+    pub db: PgPool,
 }
 
 impl AppState {
-    pub fn new(config: Config) -> Self {
-        Self {
-            config,
-            users: RwLock::new(HashMap::new()),
-            refresh_tokens: RwLock::new(HashSet::new()),
-            vaults: RwLock::new(HashMap::new()),
-        }
+    pub async fn new(config: Config) -> anyhow::Result<Self> {
+        let url = config.database_url.as_ref().ok_or_else(|| {
+            anyhow::anyhow!("DATABASE_URL must be set for persistent storage")
+        })?;
+        let db = PgPool::connect(url).await?;
+
+        Ok(Self { config, db })
     }
 }
+

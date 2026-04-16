@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,9 @@ pub async fn login(
         return Err(StatusCode::UNAUTHORIZED);
     }
     let access_token = jwt::issue_access_token(&state, user.id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let refresh_token = token::issue_refresh_token(&state).await;
+    let refresh_token = token::issue_refresh_token(&state, user.id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(AuthResponse {
         access_token,
         refresh_token,
@@ -64,12 +66,14 @@ pub async fn refresh(
     State(state): State<SharedState>,
     Json(payload): Json<RefreshRequest>,
 ) -> Result<Json<AuthResponse>, StatusCode> {
-    token::consume_refresh_token(&state, &payload.refresh_token)
+    let user_id = token::consume_refresh_token(&state, &payload.refresh_token)
         .await
         .ok_or(StatusCode::UNAUTHORIZED)?;
-    let access_token = jwt::issue_access_token(&state, uuid::Uuid::nil())
+    let access_token = jwt::issue_access_token(&state, user_id)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let refresh_token = token::issue_refresh_token(&state).await;
+    let refresh_token = token::issue_refresh_token(&state, user_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(AuthResponse {
         access_token,
         refresh_token,
@@ -78,8 +82,20 @@ pub async fn refresh(
 
 pub async fn logout(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     Json(payload): Json<RefreshRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    token::revoke_refresh_token(&state, &payload.refresh_token).await;
+    // 1. Block access token if present
+    if let Some(auth_header) = headers.get(axum::http::header::AUTHORIZATION) {
+        if let Ok(auth_str) = auth_header.to_str() {
+            if let Some(token) = auth_str.strip_prefix("Bearer ") {
+                let _ = jwt::block_token(&state, token).await;
+            }
+        }
+    }
+
+    // 2. Revoke refresh token
+    let _ = token::consume_refresh_token(&state, &payload.refresh_token).await;
+
     Ok(StatusCode::NO_CONTENT)
 }

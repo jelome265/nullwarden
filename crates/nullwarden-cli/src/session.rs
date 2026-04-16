@@ -1,27 +1,19 @@
 use anyhow::Context;
-use std::{fs, path::PathBuf};
+use keyring::Entry;
 
 pub fn save_access_token(token: &str) -> anyhow::Result<()> {
-    let path = session_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, token).context("failed to save access token")
+    let entry = Entry::new("nullwarden", "access_token").context("failed to create keyring entry")?;
+    entry.set_password(token).context("failed to save access token to keyring")?;
+    Ok(())
 }
 
-pub fn load_access_token() -> anyhow::Result<Option<String>> {
-    let path = session_path();
-    if !path.exists() {
-        return Ok(None);
-    }
-    Ok(Some(
-        fs::read_to_string(path).context("failed to load access token")?,
-    ))
+pub fn load_access_token() -> anyhow::Result<String> {
+    let entry = Entry::new("nullwarden", "access_token").context("failed to create keyring entry")?;
+    entry.get_password().context("no active session. please login or register.")
 }
 
-fn session_path() -> PathBuf {
-    dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("nullwarden")
-        .join("session.token")
+pub fn clear_access_token() -> anyhow::Result<()> {
+    let entry = Entry::new("nullwarden", "access_token").context("failed to create keyring entry")?;
+    let _ = entry.delete_password();
+    Ok(())
 }

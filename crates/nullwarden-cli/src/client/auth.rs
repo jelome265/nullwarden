@@ -32,7 +32,10 @@ impl AuthClient {
     pub async fn register(&self, username: String, password: String) -> anyhow::Result<()> {
         self.http
             .post(format!("{}/auth/register", self.base_url))
-            .json(&AuthRequest { username, password })
+            .json(&AuthRequest {
+                username: username.clone(),
+                password: password.clone(),
+            })
             .send()
             .await
             .context("register request failed")?

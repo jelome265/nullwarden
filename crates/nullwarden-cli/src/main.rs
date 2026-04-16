@@ -4,6 +4,7 @@ mod config;
 mod error;
 mod input;
 mod session;
+mod sync_state;
 
 use clap::{Parser, Subcommand};
 use commands::{add, delete, get, init, list, lock, pull, push, register};
@@ -28,6 +29,8 @@ enum Command {
     },
     Get {
         title: String,
+        #[arg(long)]
+        print: bool,
     },
     List,
     Delete {
@@ -53,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
             password,
             notes,
         } => add::run(title, username, password, notes).await?,
-        Command::Get { title } => get::run(title).await?,
+        Command::Get { title, print } => get::run(title, print).await?,
         Command::List => list::run().await?,
         Command::Delete { title } => delete::run(title).await?,
         Command::Lock => lock::run().await?,

@@ -1,17 +1,19 @@
 use crate::error::VaultError;
+use crate::types::SecretString;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultEntry {
     pub id: Uuid,
     pub title: String,
     pub username: String,
-    pub password: String,
+    pub password: SecretString,
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultData {
     pub version: u64,
     pub entries: Vec<VaultEntry>,
@@ -33,7 +35,7 @@ impl VaultData {
             id,
             title,
             username,
-            password,
+            password: SecretString(password),
             notes,
         });
         self.version = self.version.saturating_add(1);
