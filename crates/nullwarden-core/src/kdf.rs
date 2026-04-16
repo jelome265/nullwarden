@@ -1,4 +1,5 @@
 use crate::error::VaultError;
+use crate::types::VaultEncryptionKey;
 use argon2::{Algorithm, Argon2, Params, Version};
 use rand::{rngs::OsRng, RngCore};
 
@@ -36,9 +37,9 @@ pub fn generate_salt() -> [u8; SALT_LEN] {
     salt
 }
 
-pub fn derive_key(password: &[u8], salt: &[u8; SALT_LEN], params: KdfParams) -> Result<[u8; KEY_LEN], VaultError> {
+pub fn derive_key(password: &[u8], salt: &[u8; SALT_LEN], params: KdfParams) -> Result<VaultEncryptionKey, VaultError> {
     let argon2 = params.to_argon2()?;
     let mut key = [0_u8; KEY_LEN];
     argon2.hash_password_into(password, salt, &mut key)?;
-    Ok(key)
+    Ok(VaultEncryptionKey(key))
 }

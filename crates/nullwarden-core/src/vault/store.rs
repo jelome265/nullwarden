@@ -2,7 +2,8 @@ use crate::{
     crypto,
     error::VaultError,
     kdf::{derive_key, generate_salt, KdfParams},
-    vault::{header::VaultHeader, VaultData, VaultKey},
+    types::VaultNonce,
+    vault::{header::VaultHeader, VaultData},
 };
 use std::{
     fs,
@@ -41,23 +42,24 @@ impl VaultStore {
             p_cost: header.p_cost,
         };
         let key = derive_key(password.as_bytes(), &header.salt, params)?;
-        let plaintext = crypto::decrypt(&key, &header.nonce, &bytes[offset..])?;
+        let nonce = VaultNonce(header.nonce.clone());
+        let plaintext = crypto::decrypt(&key, &nonce, &bytes[offset..])?;
         rmp_serde::from_slice(&plaintext).map_err(|e| VaultError::Serialization(e.to_string()))
     }
 
     pub fn save(&self, password: &str, data: &VaultData) -> Result<(), VaultError> {
         let salt = generate_salt();
-        let key = VaultKey(derive_key(password.as_bytes(), &salt, self.params)?);
+        let key = derive_key(password.as_bytes(), &salt, self.params)?;
         let plaintext =
             rmp_serde::to_vec_named(data).map_err(|e| VaultError::Serialization(e.to_string()))?;
-        let (nonce, ciphertext) = crypto::encrypt(key.as_ref(), &plaintext)?;
+        let (nonce, ciphertext) = crypto::encrypt(&key, &plaintext)?;
         let header = VaultHeader {
             format_version: VaultHeader::FORMAT_VERSION,
             m_cost: self.params.m_cost,
             t_cost: self.params.t_cost,
             p_cost: self.params.p_cost,
             salt,
-            nonce,
+            nonce: nonce.0,
         };
         let mut file = header.encode();
         file.extend_from_slice(&ciphertext);

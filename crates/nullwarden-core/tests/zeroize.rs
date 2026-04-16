@@ -1,4 +1,4 @@
-use nullwarden_core::vault::key::VaultKey;
+use nullwarden_core::types::VaultEncryptionKey;
 use zeroize::Zeroize;
 
 #[test]
@@ -6,7 +6,7 @@ fn vault_key_zeroizes_on_drop() {
     let raw_ptr: *const u8;
     let expected_zero = [0u8; 32];
     {
-        let key = VaultKey([0xAB_u8; 32]);
+        let key = VaultEncryptionKey([0xAB_u8; 32]);
         raw_ptr = key.0.as_ptr();
         // Verify non-zero before drop
         unsafe {

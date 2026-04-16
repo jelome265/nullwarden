@@ -42,3 +42,22 @@ impl<'de> Deserialize<'de> for SecretBytes {
         Vec::<u8>::deserialize(deserializer).map(SecretBytes)
     }
 }
+
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
+pub struct VaultEncryptionKey(pub [u8; 32]);
+
+impl AsRef<[u8; 32]> for VaultEncryptionKey {
+    fn as_ref(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VaultNonce(pub [u8; 24]);
+
+impl AsRef<[u8; 24]> for VaultNonce {
+    fn as_ref(&self) -> &[u8; 24] {
+        &self.0
+    }
+}
+

@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = { workspace = true }
 argon2 = "0.5"
 axum = "0.7"
-axum-server = { version = "0.6", features = ["tls-rustls"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
 chrono = { version = "0.4", features = ["clock"] }
 constant_time_eq = "0.3"
 envy = "0.4"
