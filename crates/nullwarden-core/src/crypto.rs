@@ -14,7 +14,10 @@ pub fn generate_nonce() -> VaultNonce {
     VaultNonce(nonce)
 }
 
-pub fn encrypt(key: &VaultEncryptionKey, plaintext: &[u8]) -> Result<(VaultNonce, Vec<u8>), VaultError> {
+pub fn encrypt(
+    key: &VaultEncryptionKey,
+    plaintext: &[u8],
+) -> Result<(VaultNonce, Vec<u8>), VaultError> {
     let nonce = generate_nonce();
     let cipher = XChaCha20Poly1305::new(Key::from_slice(key.as_ref()));
     let ciphertext = cipher
@@ -23,7 +26,11 @@ pub fn encrypt(key: &VaultEncryptionKey, plaintext: &[u8]) -> Result<(VaultNonce
     Ok((nonce, ciphertext))
 }
 
-pub fn decrypt(key: &VaultEncryptionKey, nonce: &VaultNonce, ciphertext: &[u8]) -> Result<Vec<u8>, VaultError> {
+pub fn decrypt(
+    key: &VaultEncryptionKey,
+    nonce: &VaultNonce,
+    ciphertext: &[u8],
+) -> Result<Vec<u8>, VaultError> {
     let cipher = XChaCha20Poly1305::new(Key::from_slice(key.as_ref()));
     cipher
         .decrypt(XNonce::from_slice(nonce.as_ref()), ciphertext)

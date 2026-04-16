@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     extract::State,
-    http::{StatusCode, HeaderMap},
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -52,7 +52,8 @@ pub async fn login(
     if !ok {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let access_token = jwt::issue_access_token(&state, user.id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let access_token =
+        jwt::issue_access_token(&state, user.id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let refresh_token = token::issue_refresh_token(&state, user.id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -69,8 +70,8 @@ pub async fn refresh(
     let user_id = token::consume_refresh_token(&state, &payload.refresh_token)
         .await
         .ok_or(StatusCode::UNAUTHORIZED)?;
-    let access_token = jwt::issue_access_token(&state, user_id)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let access_token =
+        jwt::issue_access_token(&state, user_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let refresh_token = token::issue_refresh_token(&state, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

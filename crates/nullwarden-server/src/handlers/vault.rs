@@ -17,10 +17,10 @@ pub async fn get_vault(
     let vault = vaults::get_vault(&state, user_id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
-    
+
     let mut response_headers = HeaderMap::new();
     response_headers.insert("X-Vault-Version", vault.version.into());
-    
+
     Ok((StatusCode::OK, response_headers, vault.blob))
 }
 
@@ -30,7 +30,7 @@ pub async fn put_vault(
     body: Bytes,
 ) -> Result<impl IntoResponse, StatusCode> {
     let user_id = extract_user_id(&state, &headers).await?;
-    
+
     let expected_version = headers
         .get("X-If-Match")
         .and_then(|v| v.to_str().ok())
@@ -43,11 +43,18 @@ pub async fn put_vault(
     }
 }
 
-async fn extract_user_id(state: &SharedState, headers: &HeaderMap) -> Result<uuid::Uuid, StatusCode> {
+async fn extract_user_id(
+    state: &SharedState,
+    headers: &HeaderMap,
+) -> Result<uuid::Uuid, StatusCode> {
     let auth = headers
         .get(AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?;
-    let token = auth.strip_prefix("Bearer ").ok_or(StatusCode::UNAUTHORIZED)?;
-    jwt::validate_access_token(state, token).await.map_err(|_| StatusCode::UNAUTHORIZED)
+    let token = auth
+        .strip_prefix("Bearer ")
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    jwt::validate_access_token(state, token)
+        .await
+        .map_err(|_| StatusCode::UNAUTHORIZED)
 }

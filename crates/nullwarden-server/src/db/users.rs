@@ -1,7 +1,7 @@
 use crate::db::pool::{SharedState, StoredUser};
 use sqlx::Row;
-use uuid::Uuid;
 use tracing::error;
+use uuid::Uuid;
 
 pub async fn insert_user(
     state: &SharedState,

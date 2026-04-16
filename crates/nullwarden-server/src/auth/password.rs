@@ -13,7 +13,9 @@ pub async fn hash_password(state: &SharedState, password: &str) -> anyhow::Resul
     )?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let salt = SaltString::generate(&mut OsRng);
-    Ok(argon2.hash_password(password.as_bytes(), &salt)?.to_string())
+    Ok(argon2
+        .hash_password(password.as_bytes(), &salt)?
+        .to_string())
 }
 
 pub async fn verify_password(hash: &str, password: &str) -> anyhow::Result<bool> {

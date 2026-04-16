@@ -6,7 +6,9 @@ pub async fn run() -> anyhow::Result<()> {
     let config = Config::load()?;
     let password = prompt_password("Master password")?;
     let store = VaultStore::new(&config.vault_path);
-    store.init(&password).context("failed to initialize vault")?;
+    store
+        .init(&password)
+        .context("failed to initialize vault")?;
     println!("Vault initialized at {}", config.vault_path.display());
     Ok(())
 }

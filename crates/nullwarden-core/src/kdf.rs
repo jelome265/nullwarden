@@ -37,7 +37,11 @@ pub fn generate_salt() -> [u8; SALT_LEN] {
     salt
 }
 
-pub fn derive_key(password: &[u8], salt: &[u8; SALT_LEN], params: KdfParams) -> Result<VaultEncryptionKey, VaultError> {
+pub fn derive_key(
+    password: &[u8],
+    salt: &[u8; SALT_LEN],
+    params: KdfParams,
+) -> Result<VaultEncryptionKey, VaultError> {
     let argon2 = params.to_argon2()?;
     let mut key = [0_u8; KEY_LEN];
     argon2.hash_password_into(password, salt, &mut key)?;

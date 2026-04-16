@@ -19,8 +19,13 @@ impl SyncClient {
     }
 
     pub async fn push(&self, path: &Path, expected_version: u64) -> anyhow::Result<u64> {
-        let bytes = tokio::fs::read(path).await.context("failed to read local vault")?;
-        let mut request = self.http.put(format!("{}/vault", self.base_url)).body(bytes);
+        let bytes = tokio::fs::read(path)
+            .await
+            .context("failed to read local vault")?;
+        let mut request = self
+            .http
+            .put(format!("{}/vault", self.base_url))
+            .body(bytes);
         if let Some(token) = &self.token {
             request = request.bearer_auth(token);
         }
@@ -28,10 +33,7 @@ impl SyncClient {
             request = request.header("X-If-Match", expected_version.to_string());
         }
 
-        let response = request
-            .send()
-            .await
-            .context("push request failed")?;
+        let response = request.send().await.context("push request failed")?;
 
         if response.status() == reqwest::StatusCode::CONFLICT {
             anyhow::bail!("conflict detected: remote vault has been updated. please pull first.");
@@ -43,7 +45,7 @@ impl SyncClient {
             .text()
             .await
             .context("failed to read push response body")?;
-        
+
         // Response format is "version=N"
         let new_version = body
             .split('=')
@@ -81,7 +83,7 @@ impl SyncClient {
         tokio::fs::write(path, bytes)
             .await
             .context("failed to write local vault")?;
-        
+
         Ok(version)
     }
 }

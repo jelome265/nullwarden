@@ -15,11 +15,18 @@ fn init_add_unlock_delete_cycle() {
             None,
         )
         .expect("add");
-    store.save("correct-horse-battery-staple-42", &vault).expect("save");
+    store
+        .save("correct-horse-battery-staple-42", &vault)
+        .expect("save");
 
-    let mut reopened = store.unlock("correct-horse-battery-staple-42").expect("unlock");
+    let mut reopened = store
+        .unlock("correct-horse-battery-staple-42")
+        .expect("unlock");
     assert_eq!(reopened.entries.len(), 1);
-    assert_eq!(reopened.get_entry("github").expect("entry").username, "alice");
+    assert_eq!(
+        reopened.get_entry("github").expect("entry").username,
+        "alice"
+    );
     reopened.delete_entry("github").expect("delete");
     assert!(reopened.get_entry("github").is_none());
 }

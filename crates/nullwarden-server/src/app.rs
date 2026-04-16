@@ -2,15 +2,15 @@ use crate::{
     db::pool::SharedState,
     handlers::{auth, vault},
 };
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use axum::{
     routing::{get, post},
     Router,
 };
 use std::sync::Arc;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
-use tower_http::set_header::SetResponseHeaderLayer;
 use axum::http::{header, HeaderValue};
+use tower_http::set_header::SetResponseHeaderLayer;
 
 pub fn build_router(state: SharedState) -> Router {
     let auth_governor_conf = Arc::new(

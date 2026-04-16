@@ -19,13 +19,11 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState::new(config.clone()).await?);
 
     // Run migrations
-    sqlx::migrate!("./migrations")
-        .run(&state.db)
-        .await?;
+    sqlx::migrate!("./migrations").run(&state.db).await?;
 
     let app = build_router(state.clone());
     let addr: SocketAddr = format!("{}:{}", config.server_host, config.server_port).parse()?;
-    
+
     info!("nullwarden-server listening on {}", addr);
 
     if let (Some(cert_path), Some(key_path)) = (&config.tls_cert_path, &config.tls_key_path) {
@@ -39,6 +37,6 @@ async fn main() -> anyhow::Result<()> {
         let listener = TcpListener::bind(addr).await?;
         axum::serve(listener, app).await?;
     }
-    
+
     Ok(())
 }

@@ -1,7 +1,7 @@
 use crate::db::pool::{SharedState, StoredVault};
 use sqlx::Row;
-use uuid::Uuid;
 use tracing::error;
+use uuid::Uuid;
 pub async fn get_vault(state: &SharedState, user_id: Uuid) -> Option<StoredVault> {
     let res = sqlx::query("SELECT user_id, version, blob FROM vaults WHERE user_id = $1")
         .bind(user_id)
@@ -35,7 +35,7 @@ pub async fn put_vault(
         sqlx::query(
             "UPDATE vaults SET blob = $1, version = version + 1, updated_at = now() 
              WHERE user_id = $2 AND version = $3 
-             RETURNING user_id, version, blob"
+             RETURNING user_id, version, blob",
         )
         .bind(&blob)
         .bind(user_id)
@@ -46,7 +46,7 @@ pub async fn put_vault(
         // First push
         sqlx::query(
             "INSERT INTO vaults (user_id, blob, version) VALUES ($1, $2, 1) 
-             RETURNING user_id, version, blob"
+             RETURNING user_id, version, blob",
         )
         .bind(user_id)
         .bind(&blob)
@@ -67,4 +67,3 @@ pub async fn put_vault(
         Err(e) => Err(e),
     }
 }
-

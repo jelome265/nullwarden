@@ -1,21 +1,17 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use nullwarden_core::crypto::{encrypt, decrypt};
+use nullwarden_core::crypto::{decrypt, encrypt};
 
 fn bench_crypto(c: &mut Criterion) {
     let key = [0u8; 32];
     let data = vec![0u8; 1024]; // 1KB
-    
+
     c.bench_function("encrypt_1kb", |b| {
-        b.iter(|| {
-            encrypt(&key, black_box(&data)).unwrap()
-        })
+        b.iter(|| encrypt(&key, black_box(&data)).unwrap())
     });
 
     let (nonce, ciphertext) = encrypt(&key, &data).unwrap();
     c.bench_function("decrypt_1kb", |b| {
-        b.iter(|| {
-            decrypt(&key, &nonce, black_box(&ciphertext)).unwrap()
-        })
+        b.iter(|| decrypt(&key, &nonce, black_box(&ciphertext)).unwrap())
     });
 }
 

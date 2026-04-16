@@ -11,7 +11,8 @@ struct Claims {
 }
 
 pub fn issue_access_token(state: &SharedState, user_id: Uuid) -> anyhow::Result<String> {
-    let exp = (Utc::now() + Duration::seconds(state.config.jwt_access_expire_secs)).timestamp() as usize;
+    let exp =
+        (Utc::now() + Duration::seconds(state.config.jwt_access_expire_secs)).timestamp() as usize;
     let claims = Claims {
         sub: user_id.to_string(),
         exp,
@@ -45,7 +46,7 @@ pub async fn block_token(state: &SharedState, token: &str) -> anyhow::Result<()>
         &Validation::default(),
     )?
     .claims;
-    
+
     let expires_at = chrono::DateTime::<Utc>::from_timestamp(claims.exp as i64, 0)
         .ok_or_else(|| anyhow::anyhow!("invalid expiry in token"))?;
 
@@ -71,7 +72,7 @@ async fn is_token_blocked(state: &SharedState, token: &str) -> anyhow::Result<bo
 }
 
 fn sha256_hash(data: &str) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(data.as_bytes());
     hex::encode(hasher.finalize())

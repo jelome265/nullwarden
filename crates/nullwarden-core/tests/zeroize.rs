@@ -26,4 +26,3 @@ fn vault_key_zeroizes_on_drop() {
         );
     }
 }
-

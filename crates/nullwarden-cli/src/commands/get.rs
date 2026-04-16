@@ -11,21 +11,22 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
     let entry = vault
         .get_entry(&title)
         .with_context(|| format!("entry `{title}` not found"))?;
-    
+
     println!("title: {}", entry.title);
     println!("username: {}", entry.username);
-    
+
     if print {
         println!("password: {}", entry.password.0);
     } else {
         use arboard::Clipboard;
         let mut cb = Clipboard::new().context("failed to access clipboard")?;
-        cb.set_text(entry.password.0.clone()).context("failed to copy to clipboard")?;
+        cb.set_text(entry.password.0.clone())
+            .context("failed to copy to clipboard")?;
         println!("Password copied to clipboard (clears in 30s)");
-        
+
         let password_to_clear = entry.password.0.clone();
         tokio::time::sleep(Duration::from_secs(30)).await;
-        
+
         if let Ok(mut cb) = Clipboard::new() {
             if let Ok(current) = cb.get_text() {
                 if current == password_to_clear {
@@ -39,12 +40,12 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
     if let Some(notes) = &entry.notes {
         println!("notes: {notes}");
     }
-    
+
     // We need to wait a bit or the process might exit before the spawned task starts?
     // Actually, if the process exits, the clipboard content might remain depending on OS,
     // but the background clear task will die.
     // Password managers usually run a daemon or stay alive.
     // For now, I'll just print a message.
-    
+
     Ok(())
 }

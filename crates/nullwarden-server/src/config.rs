@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use nullwarden_core::types::SecretString;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -23,7 +23,9 @@ impl Config {
         let mut cfg = envy::from_env::<Self>()?;
         // Prefer explicit Supabase URL env var if provided (SUPABASE_DATABASE_URL or SUPABASE_URL)
         if cfg.database_url.is_none() {
-            if let Ok(supabase_url) = std::env::var("SUPABASE_DATABASE_URL").or_else(|_| std::env::var("SUPABASE_URL")) {
+            if let Ok(supabase_url) =
+                std::env::var("SUPABASE_DATABASE_URL").or_else(|_| std::env::var("SUPABASE_URL"))
+            {
                 cfg.database_url = Some(supabase_url);
             }
         }

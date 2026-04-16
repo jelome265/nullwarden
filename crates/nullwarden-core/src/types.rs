@@ -60,4 +60,3 @@ impl AsRef<[u8; 24]> for VaultNonce {
         &self.0
     }
 }
-

@@ -5,11 +5,11 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::RwLock;
-use uuid::Uuid;
 use tracing::warn;
+use uuid::Uuid;
 
 pub type SharedState = Arc<AppState>;
-n#[derive(Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct StoredUser {
     pub id: Uuid,
     pub username: String,
@@ -29,12 +29,12 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new(config: Config) -> anyhow::Result<Self> {
-        let url = config.database_url.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("DATABASE_URL must be set for persistent storage")
-        })?;
+        let url = config
+            .database_url
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("DATABASE_URL must be set for persistent storage"))?;
         let db = PgPool::connect(url).await?;
 
         Ok(Self { config, db })
     }
 }
-
