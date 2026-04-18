@@ -4,15 +4,18 @@ use crate::{
     middleware::rate_limit::get_auth_rate_limit_layer,
 };
 use axum::{
+    http::{header, HeaderName, HeaderValue},
     routing::{get, post},
     Router,
 };
-
-use axum::http::{header, HeaderValue};
-use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::{
+    request_id::{MakeRequestUuid, SetRequestIdLayer},
+    set_header::SetResponseHeaderLayer,
+};
 
 pub fn build_router(state: SharedState) -> Router {
     let auth_rate_limit = get_auth_rate_limit_layer(state.config.rate_limit_auth_requests);
+    let x_request_id = HeaderName::from_static("x-request-id");
 
     Router::new()
         .route("/health", get(|| async { "ok" }))
@@ -28,6 +31,7 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/auth/refresh", post(auth::refresh))
         .route("/auth/logout", post(auth::logout))
         .route("/vault", get(vault::get_vault).put(vault::put_vault))
+        .layer(SetRequestIdLayer::new(x_request_id, MakeRequestUuid))
         .layer(SetResponseHeaderLayer::if_not_present(
             header::STRICT_TRANSPORT_SECURITY,
             HeaderValue::from_static("max-age=31536000; includeSubDomains"),

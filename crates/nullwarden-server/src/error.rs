@@ -1,7 +1,1 @@
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum AppError {
-    #[error("internal server error")]
-    Internal,
-}
+// Server errors handled via StatusCode directly

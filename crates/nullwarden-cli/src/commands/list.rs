@@ -7,8 +7,17 @@ pub async fn run() -> anyhow::Result<()> {
     let password = prompt_password("Master password")?;
     let store = VaultStore::new(&config.vault_path);
     let vault = store.unlock(&password).context("failed to unlock vault")?;
-    for entry in &vault.entries {
-        println!("{}", entry.title);
+    
+    if vault.entries.is_empty() {
+        println!("No entries in vault.");
+        return Ok(());
     }
+    
+    println!("{:<40} {:<30}", "TITLE", "USERNAME");
+    println!("{}", "-".repeat(70));
+    for entry in &vault.entries {
+        println!("{:<40} {:<30}", entry.title, entry.username);
+    }
+    println!("\nTotal entries: {}", vault.entries.len());
     Ok(())
 }

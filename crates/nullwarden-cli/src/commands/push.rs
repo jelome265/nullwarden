@@ -26,7 +26,7 @@ pub async fn run() -> anyhow::Result<()> {
             sync_state.save(&config.vault_path)?;
             println!("Vault push completed (version {})", new_version);
         }
-        Err(e) if e.downcast_ref::<CliError>().map_or(false, |ce| matches!(ce, CliError::SyncConflict)) => {
+        Err(e) if e.downcast_ref::<CliError>().is_some_and(|ce| matches!(ce, CliError::SyncConflict)) => {
             println!("Conflict detected: remote vault has been updated by another device.");
             let choice = prompt_choice(
                 "How would you like to proceed?",

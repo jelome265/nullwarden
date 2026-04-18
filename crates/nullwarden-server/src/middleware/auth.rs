@@ -1,7 +1,7 @@
 use crate::{auth::jwt, db::pool::SharedState};
 use axum::{
     async_trait,
-    extract::{FromRequestParts, State},
+    extract::FromRequestParts,
     http::{header::AUTHORIZATION, request::Parts, StatusCode},
 };
 use uuid::Uuid;
@@ -11,19 +11,10 @@ pub struct CurrentUser {
 }
 
 #[async_trait]
-impl<S> FromRequestParts<S> for CurrentUser
-where
-    SharedState: FromRequestParts<S>,
-    S: Send + Sync,
-{
+impl FromRequestParts<SharedState> for CurrentUser {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // Extract state
-        let State(shared_state) = State::<SharedState>::from_request_parts(parts, state)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+    async fn from_request_parts(parts: &mut Parts, state: &SharedState) -> Result<Self, Self::Rejection> {
         // Extract Authorization header
         let auth_header = parts
             .headers
@@ -38,7 +29,7 @@ where
         let token = &auth_header[7..];
 
         // Validate token
-        let user_id = jwt::validate_access_token(&shared_state, token)
+        let user_id = jwt::validate_access_token(state, token)
             .await
             .map_err(|_| StatusCode::UNAUTHORIZED)?;
 

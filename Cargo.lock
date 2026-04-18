@@ -2423,6 +2423,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arboard",
+ "axum",
  "clap 4.6.0",
  "dirs",
  "keyring",
@@ -2472,6 +2473,7 @@ dependencies = [
  "chrono",
  "constant_time_eq",
  "envy",
+ "governor",
  "hex",
  "jsonwebtoken",
  "nullwarden-core",

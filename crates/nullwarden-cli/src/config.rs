@@ -10,10 +10,12 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let data_dir = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
+        let data_dir = dirs::data_local_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("nullwarden");
         Self {
             server_url: "http://127.0.0.1:8080".to_string(),
-            vault_path: data_dir.join("nullwarden").join("vault.nwd"),
+            vault_path: data_dir.join("vault.nw"),
         }
     }
 }

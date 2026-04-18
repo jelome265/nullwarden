@@ -2,10 +2,7 @@ use crate::{
     error::VaultError,
     kdf::{generate_salt, KdfParams},
     types::VaultNonce,
-    vault::{
-        header::VaultHeader,
-        VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer,
-    },
+    vault::{header::VaultHeader, VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer},
 };
 use std::{
     fs,
@@ -48,18 +45,17 @@ impl VaultStore {
             p_cost: header.p_cost,
         };
         let key = VaultKeyDeriver::derive(password, &header.salt, params)?;
-        let nonce = VaultNonce(header.nonce.clone());
+        let nonce = VaultNonce(header.nonce);
         let plaintext = VaultCipher::decrypt(&key, &nonce, &bytes[offset..])?;
         VaultSerializer::deserialize(&plaintext)
     }
-
 
     pub fn save(&self, password: &str, data: &VaultData) -> Result<(), VaultError> {
         let salt = generate_salt();
         let key = VaultKeyDeriver::derive(password, &salt, self.params)?;
         let plaintext = VaultSerializer::serialize(data)?;
         let (nonce, ciphertext) = VaultCipher::encrypt(&key, &plaintext)?;
-        
+
         let header = VaultHeader {
             format_version: VaultHeader::FORMAT_VERSION,
             m_cost: self.params.m_cost,
@@ -68,7 +64,7 @@ impl VaultStore {
             salt,
             nonce: nonce.0,
         };
-        
+
         let mut file = header.encode();
         file.extend_from_slice(&ciphertext);
         atomic_write(&self.path, &file)
