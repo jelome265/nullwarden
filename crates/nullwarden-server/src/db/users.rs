@@ -21,7 +21,6 @@ pub async fn insert_user(
     match res {
         Ok(row) => Some(StoredUser {
             id: row.get::<Uuid, _>("id"),
-            username: row.get::<String, _>("username"),
             password_hash: row.get::<String, _>("password_hash"),
         }),
         Err(e) => {
@@ -32,7 +31,7 @@ pub async fn insert_user(
 }
 
 pub async fn find_user(state: &SharedState, username: &str) -> Option<StoredUser> {
-    let res = sqlx::query("SELECT id, username, password_hash FROM users WHERE username = $1")
+    let res = sqlx::query("SELECT id, password_hash FROM users WHERE username = $1")
         .bind(username)
         .fetch_optional(&state.db)
         .await;
@@ -40,7 +39,6 @@ pub async fn find_user(state: &SharedState, username: &str) -> Option<StoredUser
     match res {
         Ok(Some(row)) => Some(StoredUser {
             id: row.get::<Uuid, _>("id"),
-            username: row.get::<String, _>("username"),
             password_hash: row.get::<String, _>("password_hash"),
         }),
         Ok(None) => None,

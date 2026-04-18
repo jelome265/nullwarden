@@ -1,24 +1,17 @@
 use crate::config::Config;
 use sqlx::PgPool;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
-use tokio::sync::RwLock;
-use tracing::warn;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub type SharedState = Arc<AppState>;
 #[derive(Debug, Clone)]
 pub struct StoredUser {
     pub id: Uuid,
-    pub username: String,
     pub password_hash: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct StoredVault {
-    pub owner_id: Uuid,
     pub version: u64,
     pub blob: Vec<u8>,
 }

@@ -1,13 +1,5 @@
-mod client;
-mod commands;
-mod config;
-mod error;
-mod input;
-mod session;
-mod sync_state;
-
 use clap::{Parser, Subcommand};
-use commands::{add, delete, get, init, list, lock, pull, push, register};
+use nullwarden_cli::commands::{add, delete, get, init, list, lock, logout, pull, push, register, update};
 
 #[derive(Parser)]
 #[command(name = "nullwarden")]
@@ -23,6 +15,15 @@ enum Command {
     Add {
         title: String,
         username: String,
+        password: Option<String>,
+        #[arg(long)]
+        notes: Option<String>,
+    },
+    Update {
+        title: String,
+        #[arg(long)]
+        username: Option<String>,
+        #[arg(long)]
         password: Option<String>,
         #[arg(long)]
         notes: Option<String>,
@@ -43,6 +44,7 @@ enum Command {
     },
     Push,
     Pull,
+    Logout,
 }
 
 #[tokio::main]
@@ -56,6 +58,12 @@ async fn main() -> anyhow::Result<()> {
             password,
             notes,
         } => add::run(title, username, password, notes).await?,
+        Command::Update {
+            title,
+            username,
+            password,
+            notes,
+        } => update::run(title, username, password, notes).await?,
         Command::Get { title, print } => get::run(title, print).await?,
         Command::List => list::run().await?,
         Command::Delete { title } => delete::run(title).await?,
@@ -63,6 +71,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Register { username, password } => register::run(username, password).await?,
         Command::Push => push::run().await?,
         Command::Pull => pull::run().await?,
+        Command::Logout => logout::run().await?,
     }
     Ok(())
 }

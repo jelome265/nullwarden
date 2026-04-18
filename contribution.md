@@ -1,3 +1,5 @@
+ gemini --resume 'd6ec720c-a945-4f07-b61a-965952adf857'
+
 NullWarden — Contribution Guide
 
 Purpose

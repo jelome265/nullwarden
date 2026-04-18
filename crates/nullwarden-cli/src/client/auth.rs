@@ -1,4 +1,4 @@
-use crate::session::save_access_token;
+use crate::session::{save_access_token, save_refresh_token};
 use anyhow::Context;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -54,8 +54,22 @@ impl AuthClient {
             .json::<AuthResponse>()
             .await
             .context("failed to parse login response")?;
-        let _ = login.refresh_token;
+
         save_access_token(&login.access_token)?;
+        save_refresh_token(&login.refresh_token)?;
+        Ok(())
+    }
+
+    pub async fn logout(&self, access_token: &str, refresh_token: &str) -> anyhow::Result<()> {
+        self.http
+            .post(format!("{}/auth/logout", self.base_url))
+            .bearer_auth(access_token)
+            .json(&serde_json::json!({ "refresh_token": refresh_token }))
+            .send()
+            .await
+            .context("logout request failed")?
+            .error_for_status()
+            .context("logout response was not successful")?;
         Ok(())
     }
 }

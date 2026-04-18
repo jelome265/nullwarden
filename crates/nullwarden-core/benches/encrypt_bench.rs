@@ -1,8 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use nullwarden_core::crypto::{decrypt, encrypt};
 
+use nullwarden_core::types::VaultEncryptionKey;
+
 fn bench_crypto(c: &mut Criterion) {
-    let key = [0u8; 32];
+    let key = VaultEncryptionKey([0u8; 32]);
     let data = vec![0u8; 1024]; // 1KB
 
     c.bench_function("encrypt_1kb", |b| {

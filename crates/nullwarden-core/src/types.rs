@@ -1,11 +1,24 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct SecretString(pub String);
 
-#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
+impl fmt::Debug for SecretString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SecretString(***REDACTED***)")
+    }
+}
+
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct SecretBytes(pub Vec<u8>);
+
+impl fmt::Debug for SecretBytes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SecretBytes(***REDACTED***)")
+    }
+}
 
 impl Serialize for SecretString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -43,8 +56,14 @@ impl<'de> Deserialize<'de> for SecretBytes {
     }
 }
 
-#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct VaultEncryptionKey(pub [u8; 32]);
+
+impl fmt::Debug for VaultEncryptionKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "VaultEncryptionKey(***REDACTED***)")
+    }
+}
 
 impl AsRef<[u8; 32]> for VaultEncryptionKey {
     fn as_ref(&self) -> &[u8; 32] {

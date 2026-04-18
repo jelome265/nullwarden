@@ -1,5 +1,5 @@
 use nullwarden_core::types::VaultEncryptionKey;
-use zeroize::Zeroize;
+
 
 #[test]
 fn vault_key_zeroizes_on_drop() {

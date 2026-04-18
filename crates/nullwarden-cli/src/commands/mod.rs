@@ -4,6 +4,8 @@ pub mod get;
 pub mod init;
 pub mod list;
 pub mod lock;
+pub mod logout;
 pub mod pull;
 pub mod push;
 pub mod register;
+pub mod update;

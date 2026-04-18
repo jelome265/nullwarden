@@ -18,7 +18,7 @@ impl SyncClient {
         }
     }
 
-    pub async fn push(&self, path: &Path, expected_version: u64) -> anyhow::Result<u64> {
+    pub async fn push(&self, path: &Path, expected_version: u64, force: bool) -> anyhow::Result<u64> {
         let bytes = tokio::fs::read(path)
             .await
             .context("failed to read local vault")?;
@@ -29,14 +29,16 @@ impl SyncClient {
         if let Some(token) = &self.token {
             request = request.bearer_auth(token);
         }
-        if expected_version > 0 {
+        if force {
+            request = request.header("X-Force", "true");
+        } else if expected_version > 0 {
             request = request.header("X-If-Match", expected_version.to_string());
         }
 
         let response = request.send().await.context("push request failed")?;
 
         if response.status() == reqwest::StatusCode::CONFLICT {
-            anyhow::bail!("conflict detected: remote vault has been updated. please pull first.");
+            return Err(crate::error::CliError::SyncConflict.into());
         }
 
         let body = response
@@ -56,7 +58,7 @@ impl SyncClient {
         Ok(new_version)
     }
 
-    pub async fn pull(&self, path: &Path) -> anyhow::Result<u64> {
+    pub async fn pull(&self, current_version: u64) -> anyhow::Result<(u64, Vec<u8>)> {
         let mut request = self.http.get(format!("{}/vault", self.base_url));
         if let Some(token) = &self.token {
             request = request.bearer_auth(token);
@@ -75,15 +77,19 @@ impl SyncClient {
             .and_then(|v| v.parse::<u64>().ok())
             .context("server did not return vault version")?;
 
+        if version < current_version {
+            anyhow::bail!(
+                "rollback detected: server version ({}) is older than local version ({}).",
+                version,
+                current_version
+            );
+        }
+
         let bytes = response
             .bytes()
             .await
             .context("failed to read pull response body")?;
 
-        tokio::fs::write(path, bytes)
-            .await
-            .context("failed to write local vault")?;
-
-        Ok(version)
+        Ok((version, bytes.to_vec()))
     }
 }

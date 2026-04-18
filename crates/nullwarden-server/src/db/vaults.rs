@@ -10,7 +10,6 @@ pub async fn get_vault(state: &SharedState, user_id: Uuid) -> Option<StoredVault
 
     match res {
         Ok(Some(row)) => Some(StoredVault {
-            owner_id: row.get::<Uuid, _>("user_id"),
             version: row.get::<i64, _>("version") as u64,
             blob: row.get::<Vec<u8>, _>("blob"),
         }),
@@ -27,11 +26,23 @@ pub async fn put_vault(
     user_id: Uuid,
     blob: Vec<u8>,
     expected_version: Option<u64>,
+    force: bool,
 ) -> Result<StoredVault, sqlx::Error> {
+    // If force is true, we overwrite regardless of version
     // If expected_version is None, we allow the first push (version 1)
     // If expected_version is Some(v), we only allow update if current version matches v
 
-    let res = if let Some(ev) = expected_version {
+    let res = if force {
+        sqlx::query(
+            "INSERT INTO vaults (user_id, blob, version) VALUES ($1, $2, 1)
+             ON CONFLICT (user_id) DO UPDATE SET blob = EXCLUDED.blob, version = vaults.version + 1, updated_at = now()
+             RETURNING user_id, version, blob",
+        )
+        .bind(user_id)
+        .bind(&blob)
+        .fetch_optional(&state.db)
+        .await
+    } else if let Some(ev) = expected_version {
         sqlx::query(
             "UPDATE vaults SET blob = $1, version = version + 1, updated_at = now() 
              WHERE user_id = $2 AND version = $3 
@@ -56,7 +67,6 @@ pub async fn put_vault(
 
     match res {
         Ok(Some(row)) => Ok(StoredVault {
-            owner_id: row.get::<Uuid, _>("user_id"),
             version: row.get::<i64, _>("version") as u64,
             blob: row.get::<Vec<u8>, _>("blob"),
         }),

@@ -4,4 +4,6 @@ use thiserror::Error;
 pub enum CliError {
     #[error("configuration error")]
     Config,
+    #[error("sync conflict: remote vault has been updated")]
+    SyncConflict,
 }

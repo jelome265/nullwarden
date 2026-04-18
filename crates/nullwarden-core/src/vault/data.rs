@@ -51,6 +51,32 @@ impl VaultData {
         self.entries.iter().find(|entry| entry.title == title)
     }
 
+    pub fn update_entry(
+        &mut self,
+        title: &str,
+        username: Option<String>,
+        password: Option<String>,
+        notes: Option<Option<String>>,
+    ) -> Result<(), VaultError> {
+        let entry = self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.title == title)
+            .ok_or(VaultError::EntryNotFound)?;
+
+        if let Some(u) = username {
+            entry.username = u;
+        }
+        if let Some(p) = password {
+            entry.password = SecretString(p);
+        }
+        if let Some(n) = notes {
+            entry.notes = n;
+        }
+        self.version = self.version.saturating_add(1);
+        Ok(())
+    }
+
     pub fn delete_entry(&mut self, title: &str) -> Result<(), VaultError> {
         let before = self.entries.len();
         self.entries.retain(|entry| entry.title != title);

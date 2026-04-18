@@ -2,14 +2,18 @@ name: release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -17,6 +21,12 @@ jobs:
       - run: cargo build --release -p nullwarden-cli --target ${{ matrix.target }}
       - name: Sign with minisign
         run: |
-          echo "$MINISIGN_SECRET_KEY" | minisign -S -s /dev/stdin \
+          echo "${{ secrets.MINISIGN_SECRET_KEY }}" | minisign -S -s /dev/stdin \
             -m target/${{ matrix.target }}/release/nullwarden-cli \
             -x target/${{ matrix.target }}/release/nullwarden-cli.minisig
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nullwarden-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/nullwarden-cli*

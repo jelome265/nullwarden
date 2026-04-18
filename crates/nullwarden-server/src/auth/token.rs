@@ -1,7 +1,7 @@
 use crate::auth::password::{hash_password, verify_password};
 use crate::db::pool::SharedState;
 use sqlx::Row;
-use tracing::{error, warn};
+use tracing::error;
 use uuid::Uuid;
 
 pub async fn issue_refresh_token(state: &SharedState, user_id: Uuid) -> anyhow::Result<String> {

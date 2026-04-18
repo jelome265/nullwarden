@@ -1,40 +1,30 @@
 use crate::{
     db::pool::SharedState,
     handlers::{auth, vault},
+    middleware::rate_limit::get_auth_rate_limit_layer,
 };
 use axum::{
     routing::{get, post},
     Router,
 };
-use std::sync::Arc;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 use axum::http::{header, HeaderValue};
 use tower_http::set_header::SetResponseHeaderLayer;
 
 pub fn build_router(state: SharedState) -> Router {
-    let auth_governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(state.config.rate_limit_auth_requests as u64)
-            .burst_size(state.config.rate_limit_auth_requests)
-            .finish()
-            .unwrap(),
-    );
+    let auth_rate_limit = get_auth_rate_limit_layer(state.config.rate_limit_auth_requests);
 
     Router::new()
         .route("/health", get(|| async { "ok" }))
         .route(
             "/auth/register",
-            post(auth::register).layer(GovernorLayer {
-                config: auth_governor_conf.clone(),
-            }),
+            post(auth::register).layer(auth_rate_limit.clone()),
         )
         .route(
             "/auth/login",
-            post(auth::login).layer(GovernorLayer {
-                config: auth_governor_conf,
-            }),
+            post(auth::login).layer(auth_rate_limit),
         )
+
         .route("/auth/refresh", post(auth::refresh))
         .route("/auth/logout", post(auth::logout))
         .route("/vault", get(vault::get_vault).put(vault::put_vault))

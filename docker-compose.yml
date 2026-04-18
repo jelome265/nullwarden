@@ -12,6 +12,8 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   server:
+    # WARNING: .env.example is for development only. 
+    # For production, create a private .env file and update this path.
     build:
       context: .
       dockerfile: Dockerfile

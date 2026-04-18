@@ -1,9 +1,11 @@
 use crate::{
-    crypto,
     error::VaultError,
-    kdf::{derive_key, generate_salt, KdfParams},
+    kdf::{generate_salt, KdfParams},
     types::VaultNonce,
-    vault::{header::VaultHeader, VaultData},
+    vault::{
+        header::VaultHeader,
+        VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer,
+    },
 };
 use std::{
     fs,
@@ -35,24 +37,29 @@ impl VaultStore {
 
     pub fn unlock(&self, password: &str) -> Result<VaultData, VaultError> {
         let bytes = fs::read(&self.path)?;
-        let (header, offset) = VaultHeader::decode(&bytes).ok_or(VaultError::InvalidFormat)?;
+        self.unlock_bytes(password, &bytes)
+    }
+
+    pub fn unlock_bytes(&self, password: &str, bytes: &[u8]) -> Result<VaultData, VaultError> {
+        let (header, offset) = VaultHeader::decode(bytes).ok_or(VaultError::InvalidFormat)?;
         let params = KdfParams {
             m_cost: header.m_cost,
             t_cost: header.t_cost,
             p_cost: header.p_cost,
         };
-        let key = derive_key(password.as_bytes(), &header.salt, params)?;
+        let key = VaultKeyDeriver::derive(password, &header.salt, params)?;
         let nonce = VaultNonce(header.nonce.clone());
-        let plaintext = crypto::decrypt(&key, &nonce, &bytes[offset..])?;
-        rmp_serde::from_slice(&plaintext).map_err(|e| VaultError::Serialization(e.to_string()))
+        let plaintext = VaultCipher::decrypt(&key, &nonce, &bytes[offset..])?;
+        VaultSerializer::deserialize(&plaintext)
     }
+
 
     pub fn save(&self, password: &str, data: &VaultData) -> Result<(), VaultError> {
         let salt = generate_salt();
-        let key = derive_key(password.as_bytes(), &salt, self.params)?;
-        let plaintext =
-            rmp_serde::to_vec_named(data).map_err(|e| VaultError::Serialization(e.to_string()))?;
-        let (nonce, ciphertext) = crypto::encrypt(&key, &plaintext)?;
+        let key = VaultKeyDeriver::derive(password, &salt, self.params)?;
+        let plaintext = VaultSerializer::serialize(data)?;
+        let (nonce, ciphertext) = VaultCipher::encrypt(&key, &plaintext)?;
+        
         let header = VaultHeader {
             format_version: VaultHeader::FORMAT_VERSION,
             m_cost: self.params.m_cost,
@@ -61,6 +68,7 @@ impl VaultStore {
             salt,
             nonce: nonce.0,
         };
+        
         let mut file = header.encode();
         file.extend_from_slice(&ciphertext);
         atomic_write(&self.path, &file)

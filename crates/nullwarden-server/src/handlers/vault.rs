@@ -1,20 +1,19 @@
 use crate::{
-    auth::jwt,
     db::{pool::SharedState, vaults},
+    middleware::auth::CurrentUser,
 };
 use axum::{
     body::Bytes,
     extract::State,
-    http::{header::AUTHORIZATION, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
 
 pub async fn get_vault(
     State(state): State<SharedState>,
-    headers: HeaderMap,
+    user: CurrentUser,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user_id = extract_user_id(&state, &headers).await?;
-    let vault = vaults::get_vault(&state, user_id)
+    let vault = vaults::get_vault(&state, user.id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
 
@@ -26,35 +25,20 @@ pub async fn get_vault(
 
 pub async fn put_vault(
     State(state): State<SharedState>,
+    user: CurrentUser,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user_id = extract_user_id(&state, &headers).await?;
-
     let expected_version = headers
         .get("X-If-Match")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u64>().ok());
+    
+    let force = headers.get("X-Force").is_some();
 
-    match vaults::put_vault(&state, user_id, body.to_vec(), expected_version).await {
+    match vaults::put_vault(&state, user.id, body.to_vec(), expected_version, force).await {
         Ok(stored) => Ok((StatusCode::OK, format!("version={}", stored.version))),
         Err(sqlx::Error::RowNotFound) => Err(StatusCode::CONFLICT),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
-}
-
-async fn extract_user_id(
-    state: &SharedState,
-    headers: &HeaderMap,
-) -> Result<uuid::Uuid, StatusCode> {
-    let auth = headers
-        .get(AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    let token = auth
-        .strip_prefix("Bearer ")
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    jwt::validate_access_token(state, token)
-        .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)
 }
