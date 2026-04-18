@@ -11,7 +11,7 @@ pub struct VaultHeader {
 }
 
 impl VaultHeader {
-    pub const MAGIC: [u8; 4] = *b"NWDN";
+    pub const MAGIC: [u8; 4] = *b"NWAR";
     pub const FORMAT_VERSION: u8 = 1;
 
     pub fn encode(&self) -> Vec<u8> {

@@ -8,12 +8,9 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 pub struct VaultEntry {
     #[zeroize(skip)]
     pub id: Uuid,
-    #[zeroize(skip)]
     pub title: String,
-    #[zeroize(skip)]
     pub username: String,
     pub password: SecretString,
-    #[zeroize(skip)]
     pub notes: Option<String>,
 }
 

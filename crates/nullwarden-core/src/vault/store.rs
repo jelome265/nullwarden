@@ -80,7 +80,12 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
         fs::create_dir_all(parent)?;
     }
     let tmp_path = path.with_extension("tmp");
-    fs::write(&tmp_path, data)?;
+    {
+        use std::io::Write;
+        let mut file = fs::File::create(&tmp_path)?;
+        file.write_all(data)?;
+        file.sync_all()?;
+    }
     fs::rename(tmp_path, path)?;
     Ok(())
 }
