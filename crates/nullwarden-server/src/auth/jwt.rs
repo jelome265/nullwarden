@@ -36,6 +36,17 @@ pub async fn validate_access_token(state: &SharedState, token: &str) -> anyhow::
         &Validation::default(),
     )?
     .claims;
+
+    // Defense against jsonwebtoken type confusion vulnerability (CVE pending)
+    // Explicitly validate exp is a valid timestamp and not malformed
+    if claims.exp == 0 {
+        anyhow::bail!("invalid token: missing or malformed exp claim");
+    }
+    let now = Utc::now().timestamp() as usize;
+    if claims.exp < now {
+        anyhow::bail!("token expired");
+    }
+
     Ok(Uuid::parse_str(&claims.sub)?)
 }
 
@@ -46,6 +57,11 @@ pub async fn block_token(state: &SharedState, token: &str) -> anyhow::Result<()>
         &Validation::default(),
     )?
     .claims;
+
+    // Defense against jsonwebtoken type confusion vulnerability
+    if claims.exp == 0 {
+        anyhow::bail!("invalid token: missing or malformed exp claim");
+    }
 
     let expires_at = chrono::DateTime::<Utc>::from_timestamp(claims.exp as i64, 0)
         .ok_or_else(|| anyhow::anyhow!("invalid expiry in token"))?;
