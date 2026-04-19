@@ -34,7 +34,9 @@ impl AppState {
             .ok_or_else(|| anyhow::anyhow!("DATABASE_URL must be set for persistent storage"))?;
         let _db = PgPool::connect(url).await?;
 
-        Err(anyhow::anyhow!("AppState::new is deprecated. Use AppState::init instead."))
+        Err(anyhow::anyhow!(
+            "AppState::new is deprecated. Use AppState::init instead."
+        ))
     }
 
     pub fn init(

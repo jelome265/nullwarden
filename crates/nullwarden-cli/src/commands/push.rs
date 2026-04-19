@@ -15,7 +15,7 @@ pub async fn run() -> anyhow::Result<()> {
     let mut sync_state = SyncState::load(&config.vault_path)?;
 
     let client = SyncClient::new(config.server_url.clone(), Some(token));
-    
+
     let res = client
         .push(&config.vault_path, sync_state.last_version, false)
         .await;
@@ -26,7 +26,10 @@ pub async fn run() -> anyhow::Result<()> {
             sync_state.save(&config.vault_path)?;
             println!("Vault push completed (version {})", new_version);
         }
-        Err(e) if e.downcast_ref::<CliError>().is_some_and(|ce| matches!(ce, CliError::SyncConflict)) => {
+        Err(e)
+            if e.downcast_ref::<CliError>()
+                .is_some_and(|ce| matches!(ce, CliError::SyncConflict)) =>
+        {
             println!("Conflict detected: remote vault has been updated by another device.");
             let choice = prompt_choice(
                 "How would you like to proceed?",
@@ -44,7 +47,7 @@ pub async fn run() -> anyhow::Result<()> {
                     }
 
                     println!("Force pushing local vault...");
-                    let new_version = client.push(&config.vault_path, 0, true).await?; 
+                    let new_version = client.push(&config.vault_path, 0, true).await?;
                     sync_state.last_version = new_version;
                     sync_state.save(&config.vault_path)?;
                     println!("Vault push completed (version {})", new_version);
@@ -55,9 +58,13 @@ pub async fn run() -> anyhow::Result<()> {
                     let (version, bytes) = client.pull(sync_state.last_version).await?;
                     let master_password = prompt_password("Master password")?;
                     let store = VaultStore::new(&config.vault_path);
-                    store.unlock_bytes(&master_password, &bytes).context("failed to decrypt downloaded vault (integrity check failed)")?;
-                    
-                    tokio::fs::write(&config.vault_path, bytes).await.context("failed to write local vault")?;
+                    store
+                        .unlock_bytes(&master_password, &bytes)
+                        .context("failed to decrypt downloaded vault (integrity check failed)")?;
+
+                    tokio::fs::write(&config.vault_path, bytes)
+                        .await
+                        .context("failed to write local vault")?;
                     sync_state.last_version = version;
                     sync_state.save(&config.vault_path)?;
                     println!("Vault pull completed (version {})", version);

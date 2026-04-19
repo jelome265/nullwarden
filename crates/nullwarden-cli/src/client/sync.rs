@@ -18,7 +18,12 @@ impl SyncClient {
         }
     }
 
-    pub async fn push(&self, path: &Path, expected_version: u64, force: bool) -> anyhow::Result<u64> {
+    pub async fn push(
+        &self,
+        path: &Path,
+        expected_version: u64,
+        force: bool,
+    ) -> anyhow::Result<u64> {
         let bytes = tokio::fs::read(path)
             .await
             .context("failed to read local vault")?;

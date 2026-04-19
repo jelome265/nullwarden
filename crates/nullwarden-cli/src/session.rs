@@ -47,7 +47,9 @@ pub fn clear_refresh_token() -> anyhow::Result<()> {
 
 fn save_to_keyring(account: &str, secret: &str) -> anyhow::Result<()> {
     let entry = Entry::new("nullwarden", account).context("failed to create keyring entry")?;
-    entry.set_password(secret).context("failed to save to keyring")?;
+    entry
+        .set_password(secret)
+        .context("failed to save to keyring")?;
     Ok(())
 }
 
@@ -74,7 +76,7 @@ fn save_to_file(account: &str, secret: &str) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    
+
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -85,7 +87,7 @@ fn save_to_file(account: &str, secret: &str) -> anyhow::Result<()> {
     {
         fs::write(&path, secret)?;
     }
-    
+
     Ok(())
 }
 

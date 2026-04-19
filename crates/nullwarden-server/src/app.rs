@@ -6,7 +6,7 @@ use crate::{
 use axum::{
     extract::DefaultBodyLimit,
     http::{
-        header::{self, AUTHORIZATION, CONTENT_TYPE, HeaderValue},
+        header::{self, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
         Method,
     },
     middleware,

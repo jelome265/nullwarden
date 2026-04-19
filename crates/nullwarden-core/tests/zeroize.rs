@@ -1,6 +1,5 @@
 use nullwarden_core::types::VaultEncryptionKey;
 
-
 #[test]
 fn vault_key_zeroizes_on_drop() {
     let raw_ptr: *const u8;

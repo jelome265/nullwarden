@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
-use nullwarden_cli::commands::{add, delete, get, init, list, lock, logout, pull, push, register, update};
+use nullwarden_cli::commands::{
+    add, delete, get, init, list, lock, logout, pull, push, register, update,
+};
 
 #[derive(Parser)]
 #[command(name = "nullwarden")]

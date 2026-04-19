@@ -1,4 +1,8 @@
-use crate::{client::auth::AuthClient, config::Config, input::{prompt_password, validate_password_strength}};
+use crate::{
+    client::auth::AuthClient,
+    config::Config,
+    input::{prompt_password, validate_password_strength},
+};
 
 pub async fn run(username: String, password: Option<String>) -> anyhow::Result<()> {
     let config = Config::load()?;

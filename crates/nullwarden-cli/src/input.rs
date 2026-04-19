@@ -35,6 +35,9 @@ pub fn prompt_choice(prompt: &str, choices: &[&str]) -> anyhow::Result<usize> {
                 return Ok(i);
             }
         }
-        println!("Invalid choice. Please choose one of: {}", choices.join(", "));
+        println!(
+            "Invalid choice. Please choose one of: {}",
+            choices.join(", ")
+        );
     }
 }

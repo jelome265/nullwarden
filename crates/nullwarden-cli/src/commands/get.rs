@@ -24,7 +24,6 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
         println!("Password copied to clipboard. Clear it manually after use.");
     }
 
-
     if let Some(notes) = &entry.notes {
         println!("notes: {notes}");
     }

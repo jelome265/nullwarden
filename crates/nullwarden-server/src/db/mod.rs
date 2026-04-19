@@ -2,13 +2,17 @@ pub mod pool;
 pub mod users;
 pub mod vaults;
 
+use crate::db::pool::{StoredUser, StoredVault};
 use async_trait::async_trait;
 use uuid::Uuid;
-use crate::db::pool::{StoredUser, StoredVault};
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
-    async fn insert_user(&self, username: String, password_hash: String) -> Result<StoredUser, sqlx::Error>;
+    async fn insert_user(
+        &self,
+        username: String,
+        password_hash: String,
+    ) -> Result<StoredUser, sqlx::Error>;
     async fn find_user(&self, username: &str) -> Result<Option<StoredUser>, sqlx::Error>;
 }
 

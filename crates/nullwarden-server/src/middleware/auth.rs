@@ -14,7 +14,10 @@ pub struct CurrentUser {
 impl FromRequestParts<SharedState> for CurrentUser {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &mut Parts, state: &SharedState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &SharedState,
+    ) -> Result<Self, Self::Rejection> {
         // Extract Authorization header
         let auth_header = parts
             .headers

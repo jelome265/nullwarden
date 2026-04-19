@@ -14,7 +14,9 @@ pub async fn get_vault(
     State(state): State<SharedState>,
     user: CurrentUser,
 ) -> AppResult<impl IntoResponse> {
-    let vault = state.vaults.get_vault(user.id)
+    let vault = state
+        .vaults
+        .get_vault(user.id)
         .await?
         .ok_or_else(|| AppError::NotFound("Vault not found".to_string()))?;
 
@@ -38,12 +40,18 @@ pub async fn put_vault(
         .get("X-If-Match")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u64>().ok());
-    
+
     let force = headers.get("X-Force").is_some();
 
-    match state.vaults.put_vault(user.id, body.to_vec(), expected_version, force).await {
+    match state
+        .vaults
+        .put_vault(user.id, body.to_vec(), expected_version, force)
+        .await
+    {
         Ok(stored) => Ok((StatusCode::OK, format!("version={}", stored.version))),
-        Err(sqlx::Error::RowNotFound) => Err(AppError::Conflict("Vault version mismatch".to_string())),
+        Err(sqlx::Error::RowNotFound) => {
+            Err(AppError::Conflict("Vault version mismatch".to_string()))
+        }
         Err(e) => Err(AppError::Database(e)),
     }
 }

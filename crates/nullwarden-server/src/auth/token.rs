@@ -29,18 +29,19 @@ pub async fn issue_refresh_token(state: &SharedState, user_id: Uuid) -> anyhow::
 /// Consumes a refresh token and returns the associated user_id if valid.
 /// The token string should be in the format "token_id:secret".
 pub async fn consume_refresh_token(state: &SharedState, token: &str) -> Result<Uuid, AppError> {
-    let (id_str, secret) = token.split_once(':').ok_or_else(|| {
-        AppError::Unauthorized("Invalid token format".to_string())
-    })?;
+    let (id_str, secret) = token
+        .split_once(':')
+        .ok_or_else(|| AppError::Unauthorized("Invalid token format".to_string()))?;
 
-    let token_id = Uuid::parse_str(id_str).map_err(|_| {
-        AppError::Unauthorized("Invalid token ID".to_string())
-    })?;
+    let token_id = Uuid::parse_str(id_str)
+        .map_err(|_| AppError::Unauthorized("Invalid token ID".to_string()))?;
 
-    let row = sqlx::query("SELECT secret_hash, user_id FROM refresh_tokens WHERE id = $1 AND expires_at > now()")
-        .bind(token_id)
-        .fetch_optional(&state.db)
-        .await?;
+    let row = sqlx::query(
+        "SELECT secret_hash, user_id FROM refresh_tokens WHERE id = $1 AND expires_at > now()",
+    )
+    .bind(token_id)
+    .fetch_optional(&state.db)
+    .await?;
 
     match row {
         Some(row) => {
@@ -55,7 +56,9 @@ pub async fn consume_refresh_token(state: &SharedState, token: &str) -> Result<U
                 Err(AppError::Unauthorized("Invalid token secret".to_string()))
             }
         }
-        None => Err(AppError::Unauthorized("Token expired or not found".to_string())),
+        None => Err(AppError::Unauthorized(
+            "Token expired or not found".to_string(),
+        )),
     }
 }
 

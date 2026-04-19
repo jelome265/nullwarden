@@ -17,7 +17,9 @@ pub async fn run() -> anyhow::Result<()> {
     let store = VaultStore::new(&config.vault_path);
 
     // UC-06: Validate integrity before writing
-    store.unlock_bytes(&master_password, &bytes).context("failed to decrypt downloaded vault (integrity check failed)")?;
+    store
+        .unlock_bytes(&master_password, &bytes)
+        .context("failed to decrypt downloaded vault (integrity check failed)")?;
 
     tokio::fs::write(&config.vault_path, bytes)
         .await

@@ -2,10 +2,7 @@ use crate::{
     error::VaultError,
     kdf::{generate_salt, KdfParams},
     types::VaultNonce,
-    vault::{
-        header::VaultHeader,
-        VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer,
-    },
+    vault::{header::VaultHeader, VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer},
 };
 use std::{
     fs,
@@ -86,7 +83,7 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
         fs::create_dir_all(parent)?;
     }
     let tmp_path = path.with_extension("tmp");
-    
+
     let write_result: Result<(), VaultError> = (|| {
         use std::io::Write;
         let mut file = fs::File::create(&tmp_path)?;
