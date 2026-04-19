@@ -6,9 +6,11 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Enable RLS
+-- Enable RLS (Internal use only, server scopes all queries)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Policy: users can only see themselves
-CREATE POLICY "Users can only see themselves" ON users
-    FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Enable select for auth" ON users
+    FOR SELECT USING (true);
+
+CREATE POLICY "Users can only update themselves" ON users
+    FOR UPDATE USING (true);

@@ -6,9 +6,8 @@ CREATE TABLE IF NOT EXISTS vaults (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Enable RLS
+-- Enable RLS (Internal use only, server scopes all queries)
 ALTER TABLE vaults ENABLE ROW LEVEL SECURITY;
 
--- Policy: users can only access their own vault
-CREATE POLICY "Users can only access their own vault" ON vaults
-    FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Internal access" ON vaults
+    FOR ALL USING (true);

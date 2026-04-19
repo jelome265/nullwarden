@@ -1,7 +1,6 @@
 use crate::{config::Config, input::prompt_password};
 use anyhow::Context;
 use nullwarden_core::vault::VaultStore;
-use std::time::Duration;
 
 pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
     let config = Config::load()?;
@@ -22,20 +21,9 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
         let mut cb = Clipboard::new().context("failed to access clipboard")?;
         cb.set_text(entry.password.0.clone())
             .context("failed to copy to clipboard")?;
-        println!("Password copied to clipboard (clears in 30s)");
-
-        let password_to_clear = entry.password.0.clone();
-        tokio::time::sleep(Duration::from_secs(30)).await;
-
-        if let Ok(mut cb) = Clipboard::new() {
-            if let Ok(current) = cb.get_text() {
-                if current == password_to_clear {
-                    let _ = cb.set_text("".to_string());
-                    println!("Clipboard cleared.");
-                }
-            }
-        }
+        println!("Password copied to clipboard. Clear it manually after use.");
     }
+
 
     if let Some(notes) = &entry.notes {
         println!("notes: {notes}");

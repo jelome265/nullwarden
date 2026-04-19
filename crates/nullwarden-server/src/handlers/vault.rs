@@ -1,5 +1,6 @@
 use crate::{
-    db::{pool::SharedState, vaults},
+    db::pool::SharedState,
+    error::{AppError, AppResult},
     middleware::auth::CurrentUser,
 };
 use axum::{
@@ -12,13 +13,17 @@ use axum::{
 pub async fn get_vault(
     State(state): State<SharedState>,
     user: CurrentUser,
-) -> Result<impl IntoResponse, StatusCode> {
-    let vault = vaults::get_vault(&state, user.id)
-        .await
-        .ok_or(StatusCode::NOT_FOUND)?;
+) -> AppResult<impl IntoResponse> {
+    let vault = state.vaults.get_vault(user.id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Vault not found".to_string()))?;
 
     let mut response_headers = HeaderMap::new();
-    response_headers.insert("X-Vault-Version", vault.version.into());
+    response_headers.insert(
+        "X-Vault-Version",
+        axum::http::HeaderValue::from_str(&vault.version.to_string())
+            .expect("version is always a valid header value"),
+    );
 
     Ok((StatusCode::OK, response_headers, vault.blob))
 }
@@ -28,7 +33,7 @@ pub async fn put_vault(
     user: CurrentUser,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<impl IntoResponse, StatusCode> {
+) -> AppResult<impl IntoResponse> {
     let expected_version = headers
         .get("X-If-Match")
         .and_then(|v| v.to_str().ok())
@@ -36,9 +41,9 @@ pub async fn put_vault(
     
     let force = headers.get("X-Force").is_some();
 
-    match vaults::put_vault(&state, user.id, body.to_vec(), expected_version, force).await {
+    match state.vaults.put_vault(user.id, body.to_vec(), expected_version, force).await {
         Ok(stored) => Ok((StatusCode::OK, format!("version={}", stored.version))),
-        Err(sqlx::Error::RowNotFound) => Err(StatusCode::CONFLICT),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(sqlx::Error::RowNotFound) => Err(AppError::Conflict("Vault version mismatch".to_string())),
+        Err(e) => Err(AppError::Database(e)),
     }
 }

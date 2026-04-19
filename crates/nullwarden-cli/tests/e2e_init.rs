@@ -15,9 +15,10 @@ fn test_config_lifecycle() {
     let config_path = dir.path().join("config.toml");
     let vault_path = dir.path().join("vault.nw");
 
-    let mut config = Config::default();
-    config.vault_path = vault_path.clone();
-    config.server_url = "http://localhost:8080".to_string();
+    let config = Config {
+        vault_path: vault_path.clone(),
+        server_url: "http://localhost:8080".to_string(),
+    };
 
     // Test saving
     fs::create_dir_all(config_path.parent().unwrap()).unwrap();

@@ -32,6 +32,9 @@ impl VaultHeader {
             return None;
         }
         let format_version = input[4];
+        if format_version != Self::FORMAT_VERSION {
+            return None;
+        }
         let m_cost = u32::from_le_bytes(input[5..9].try_into().ok()?);
         let t_cost = u32::from_le_bytes(input[9..13].try_into().ok()?);
         let p_cost = u32::from_le_bytes(input[13..17].try_into().ok()?);

@@ -27,6 +27,8 @@ enum Command {
         password: Option<String>,
         #[arg(long)]
         notes: Option<String>,
+        #[arg(long)]
+        clear_notes: bool,
     },
     Get {
         title: String,
@@ -63,7 +65,8 @@ async fn main() -> anyhow::Result<()> {
             username,
             password,
             notes,
-        } => update::run(title, username, password, notes).await?,
+            clear_notes,
+        } => update::run(title, username, password, notes, clear_notes).await?,
         Command::Get { title, print } => get::run(title, print).await?,
         Command::List => list::run().await?,
         Command::Delete { title } => delete::run(title).await?,

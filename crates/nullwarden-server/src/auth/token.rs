@@ -1,71 +1,86 @@
 use crate::auth::password::{hash_password, verify_password};
 use crate::db::pool::SharedState;
+use crate::error::AppError;
+use chrono::{Duration, Utc};
 use sqlx::Row;
-use tracing::error;
 use uuid::Uuid;
 
+/// Issues a new refresh token for a user.
+/// Returns a string in the format "token_id:secret".
 pub async fn issue_refresh_token(state: &SharedState, user_id: Uuid) -> anyhow::Result<String> {
-    let token = Uuid::new_v4().to_string();
-    let hash = hash_password(state, &token).await?;
+    let token_id = Uuid::new_v4();
+    let secret = Uuid::new_v4().to_string();
+    let secret_hash = hash_password(&state.config, &secret).await?;
+    let expires_at = Utc::now() + Duration::days(state.config.jwt_refresh_expire_days);
 
-    sqlx::query("INSERT INTO refresh_tokens (token_hash, user_id) VALUES ($1, $2)")
-        .bind(hash)
-        .bind(user_id)
-        .execute(&state.db)
-        .await?;
+    sqlx::query(
+        "INSERT INTO refresh_tokens (id, secret_hash, user_id, expires_at) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(token_id)
+    .bind(secret_hash)
+    .bind(user_id)
+    .bind(expires_at)
+    .execute(&state.db)
+    .await?;
 
-    Ok(token)
+    Ok(format!("{}:{}", token_id, secret))
 }
 
-pub async fn consume_refresh_token(state: &SharedState, token: &str) -> Option<Uuid> {
-    // This is tricky with Argon2 because we can't lookup by hash directly if salt is random
-    // But for tokens, we can use a static salt or just iterate and verify (slow)
-    // OR we can use a faster hash for lookup (like SHA256) and Argon2 for second factor?
-    // Actually, Argon2id is requested.
+/// Consumes a refresh token and returns the associated user_id if valid.
+/// The token string should be in the format "token_id:secret".
+pub async fn consume_refresh_token(state: &SharedState, token: &str) -> Result<Uuid, AppError> {
+    let (id_str, secret) = token.split_once(':').ok_or_else(|| {
+        AppError::Unauthorized("Invalid token format".to_string())
+    })?;
 
-    // To make it efficient, we usually store the token ID separately from the secret.
-    // For now, I'll fetch all tokens and verify. (Performance is not a concern for prototype)
-    // Wait, that's terrible.
+    let token_id = Uuid::parse_str(id_str).map_err(|_| {
+        AppError::Unauthorized("Invalid token ID".to_string())
+    })?;
 
-    // Better: store as `token_id:secret` where `token_id` is indexed and `secret` is hashed.
-    // But the audit said "Store refresh tokens as HashMap<String, Uuid> (token_hash → user_id)".
+    let row = sqlx::query("SELECT secret_hash, user_id FROM refresh_tokens WHERE id = $1 AND expires_at > now()")
+        .bind(token_id)
+        .fetch_optional(&state.db)
+        .await?;
 
-    // If we use a static salt for tokens, we can lookup by hash.
-    // Let's use a simpler approach for now: fetch all for the last hour and verify.
-    // No, I'll just change the schema to have an ID.
+    match row {
+        Some(row) => {
+            let secret_hash: String = row.get("secret_hash");
+            let user_id: Uuid = row.get("user_id");
 
-    // Actually, I'll use a simple SHA256 for the lookup and Argon2 for storage if I must?
-    // No, I'll just use a UUID as the primary key (token_id) and store the Argon2 hash of the secret.
-
-    // Let's stick to what's easiest: fetch ALL and verify.
-    let rows = sqlx::query("SELECT token_hash, user_id FROM refresh_tokens")
-        .fetch_all(&state.db)
-        .await;
-
-    match rows {
-        Ok(rows) => {
-            for row in rows {
-                let hash: String = row.get("token_hash");
-                if verify_password(&hash, token).await.unwrap_or(false) {
-                    let user_id: Uuid = row.get("user_id");
-                    // Revoke after use (one-time use)
-                    let _ = revoke_refresh_token(state, &hash).await;
-                    return Some(user_id);
-                }
+            if verify_password(&secret_hash, secret).await.unwrap_or(false) {
+                // Revoke after one-time use
+                let _ = revoke_refresh_token(state, token_id).await;
+                Ok(user_id)
+            } else {
+                Err(AppError::Unauthorized("Invalid token secret".to_string()))
             }
-            None
         }
-        Err(e) => {
-            error!("DB consume_refresh_token failed: {}", e);
-            None
-        }
+        None => Err(AppError::Unauthorized("Token expired or not found".to_string())),
     }
 }
 
-pub async fn revoke_refresh_token(state: &SharedState, token_hash: &str) -> anyhow::Result<()> {
-    sqlx::query("DELETE FROM refresh_tokens WHERE token_hash = $1")
-        .bind(token_hash)
+/// Revokes a refresh token by its ID.
+pub async fn revoke_refresh_token(state: &SharedState, id: Uuid) -> anyhow::Result<()> {
+    sqlx::query("DELETE FROM refresh_tokens WHERE id = $1")
+        .bind(id)
         .execute(&state.db)
         .await?;
     Ok(())
+}
+
+/// Revokes all refresh tokens for a user.
+pub async fn revoke_all_user_tokens(state: &SharedState, user_id: Uuid) -> anyhow::Result<()> {
+    sqlx::query("DELETE FROM refresh_tokens WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&state.db)
+        .await?;
+    Ok(())
+}
+
+/// Cleanup expired tokens.
+pub async fn cleanup_expired_tokens(state: &SharedState) -> anyhow::Result<u64> {
+    let res = sqlx::query("DELETE FROM refresh_tokens WHERE expires_at < now()")
+        .execute(&state.db)
+        .await?;
+    Ok(res.rows_affected())
 }

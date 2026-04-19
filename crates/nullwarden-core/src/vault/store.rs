@@ -2,7 +2,10 @@ use crate::{
     error::VaultError,
     kdf::{generate_salt, KdfParams},
     types::VaultNonce,
-    vault::{header::VaultHeader, VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer},
+    vault::{
+        header::VaultHeader,
+        VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer,
+    },
 };
 use std::{
     fs,
@@ -19,6 +22,13 @@ impl VaultStore {
         Self {
             path: path.into(),
             params: KdfParams::default(),
+        }
+    }
+
+    pub fn with_params(path: impl Into<PathBuf>, params: KdfParams) -> Self {
+        Self {
+            path: path.into(),
+            params,
         }
     }
 
@@ -76,12 +86,21 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
         fs::create_dir_all(parent)?;
     }
     let tmp_path = path.with_extension("tmp");
-    {
+    
+    let write_result: Result<(), VaultError> = (|| {
         use std::io::Write;
         let mut file = fs::File::create(&tmp_path)?;
         file.write_all(data)?;
         file.sync_all()?;
+        Ok(())
+    })();
+
+    if let Err(e) = write_result {
+        // H-02: Best-effort cleanup of temp file
+        let _ = fs::remove_file(&tmp_path);
+        return Err(e);
     }
-    fs::rename(tmp_path, path)?;
+
+    fs::rename(&tmp_path, path)?;
     Ok(())
 }

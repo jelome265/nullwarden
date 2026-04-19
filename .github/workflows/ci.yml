@@ -12,15 +12,17 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+      - name: KDF latency gate
+        run: cargo test -- --ignored kdf_meets_minimum_latency
+      
+      - name: Install tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny,cargo-tarpaulin
+
       - name: Audit dependencies
         run: cargo audit
-      - name: Install cargo-deny
-        run: cargo install cargo-deny --locked
       - name: Deny policy check
         run: cargo deny check
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin --locked
       - name: Coverage gate
         run: cargo tarpaulin -p nullwarden-core --fail-under 80

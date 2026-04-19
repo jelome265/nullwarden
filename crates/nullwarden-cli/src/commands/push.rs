@@ -36,6 +36,13 @@ pub async fn run() -> anyhow::Result<()> {
             match choice {
                 0 => {
                     // Overwrite server (force push)
+                    println!("WARNING: Force pushing will overwrite the remote vault. This is destructive.");
+                    let confirm = prompt_choice("Are you absolutely sure?", &["yes", "no"])?;
+                    if confirm != 0 {
+                        println!("Sync aborted.");
+                        return Ok(());
+                    }
+
                     println!("Force pushing local vault...");
                     let new_version = client.push(&config.vault_path, 0, true).await?; 
                     sync_state.last_version = new_version;

@@ -1,14 +1,14 @@
-use crate::db::pool::SharedState;
+use crate::config::Config;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Algorithm, Argon2, Params, Version,
 };
 
-pub async fn hash_password(state: &SharedState, password: &str) -> anyhow::Result<String> {
+pub async fn hash_password(config: &Config, password: &str) -> anyhow::Result<String> {
     let params = Params::new(
-        state.config.auth_argon2_m_cost,
-        state.config.auth_argon2_t_cost,
-        state.config.auth_argon2_p_cost,
+        config.auth_argon2_m_cost,
+        config.auth_argon2_t_cost,
+        config.auth_argon2_p_cost,
         None,
     )?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);

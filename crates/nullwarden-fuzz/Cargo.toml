@@ -2,6 +2,17 @@
 name = "nullwarden-fuzz"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 nullwarden-core = { path = "../nullwarden-core" }
+libfuzzer-sys = "0.4"
+rmp-serde = "1.1"
+
+[[bin]]
+name = "decrypt_input"
+path = "fuzz_targets/decrypt_input.rs"
+
+[[bin]]
+name = "vault_deserialize"
+path = "fuzz_targets/vault_deserialize.rs"

@@ -1,12 +1,12 @@
-mod app;
-mod auth;
-mod config;
-mod db;
-mod error;
-mod handlers;
-mod middleware;
-
-use crate::{app::build_router, config::Config, db::pool::AppState};
+use nullwarden_server::{
+    app::build_router,
+    auth::password,
+    config::Config,
+    db::pool::AppState,
+    db::users::SqlxUserRepository,
+    db::vaults::SqlxVaultRepository,
+};
+use sqlx::PgPool;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tracing::{info, warn};
@@ -15,13 +15,25 @@ use tracing::{info, warn};
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let config = Config::from_env()?;
-    // Initialize AppState (connects to Supabase/Postgres)
-    let state = Arc::new(AppState::new(config.clone()).await?);
+
+    let db_url = config.database_url.as_ref().ok_or_else(|| {
+        anyhow::anyhow!("DATABASE_URL must be set")
+    })?;
+    let db = PgPool::connect(db_url).await?;
 
     // Run migrations
-    sqlx::migrate!("./migrations").run(&state.db).await?;
+    sqlx::migrate!("./migrations").run(&db).await?;
 
-    let app = build_router(state.clone());
+    // C-02: Pre-compute dummy hash for timing oracle mitigation
+    let dummy_hash = password::hash_password(&config, "dummy_password_never_used_xyz_!@#").await?;
+
+    // Initialize repositories
+    let users = Arc::new(SqlxUserRepository { pool: db.clone() });
+    let vaults = Arc::new(SqlxVaultRepository { pool: db.clone() });
+
+    let state = Arc::new(AppState::init(config.clone(), db, users, vaults, dummy_hash));
+
+    let app = build_router(state);
     let addr: SocketAddr = format!("{}:{}", config.server_host, config.server_port).parse()?;
 
     info!("nullwarden-server listening on {}", addr);

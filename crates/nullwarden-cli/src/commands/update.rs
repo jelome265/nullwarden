@@ -10,10 +10,11 @@ pub async fn run(
     username: Option<String>,
     password: Option<String>,
     notes: Option<String>,
+    clear_notes: bool,
 ) -> anyhow::Result<()> {
     let config = Config::load()?;
     let master_password = prompt_password("Master password")?;
-    
+
     let store = VaultStore::new(&config.vault_path);
     let mut vault = store
         .unlock(&master_password)
@@ -23,11 +24,15 @@ pub async fn run(
         validate_password_strength(p)?;
     }
 
-    // Note: We use Option<Option<String>> for notes to allow clearing them if we wanted, 
-    // but for now we just pass through the Some(notes) or None (no change).
-    // If the user provided a notes string, we update it.
-    vault.update_entry(&title, username, password, notes.map(Some))?;
-    
+    // M-05: Handle clear_notes flag
+    let notes_update = if clear_notes {
+        Some(None)
+    } else {
+        notes.map(Some)
+    };
+
+    vault.update_entry(&title, username, password, notes_update)?;
+
     store.save(&master_password, &vault)?;
     println!("Updated entry `{title}`");
     Ok(())

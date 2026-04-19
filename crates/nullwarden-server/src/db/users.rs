@@ -1,50 +1,43 @@
-use crate::db::pool::{SharedState, StoredUser};
-use sqlx::Row;
-use tracing::error;
+use crate::db::pool::StoredUser;
+use crate::db::UserRepository;
+use async_trait::async_trait;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-pub async fn insert_user(
-    state: &SharedState,
-    username: String,
-    password_hash: String,
-) -> Option<StoredUser> {
-    let id = Uuid::new_v4();
-    let res = sqlx::query(
-        "INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3) RETURNING id, username, password_hash",
-    )
-    .bind(id)
-    .bind(&username)
-    .bind(&password_hash)
-    .fetch_one(&state.db)
-    .await;
-
-    match res {
-        Ok(row) => Some(StoredUser {
-            id: row.get::<Uuid, _>("id"),
-            password_hash: row.get::<String, _>("password_hash"),
-        }),
-        Err(e) => {
-            error!("DB insert_user failed: {}", e);
-            None
-        }
-    }
+pub struct SqlxUserRepository {
+    pub pool: PgPool,
 }
 
-pub async fn find_user(state: &SharedState, username: &str) -> Option<StoredUser> {
-    let res = sqlx::query("SELECT id, password_hash FROM users WHERE username = $1")
-        .bind(username)
-        .fetch_optional(&state.db)
-        .await;
+#[async_trait]
+impl UserRepository for SqlxUserRepository {
+    async fn insert_user(
+        &self,
+        username: String,
+        password_hash: String,
+    ) -> Result<StoredUser, sqlx::Error> {
+        let res = sqlx::query(
+            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, password_hash",
+        )
+        .bind(&username)
+        .bind(&password_hash)
+        .fetch_one(&self.pool)
+        .await?;
 
-    match res {
-        Ok(Some(row)) => Some(StoredUser {
+        Ok(StoredUser {
+            id: res.get::<Uuid, _>("id"),
+            password_hash: res.get::<String, _>("password_hash"),
+        })
+    }
+
+    async fn find_user(&self, username: &str) -> Result<Option<StoredUser>, sqlx::Error> {
+        let res = sqlx::query("SELECT id, password_hash FROM users WHERE username = $1")
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(res.map(|row| StoredUser {
             id: row.get::<Uuid, _>("id"),
             password_hash: row.get::<String, _>("password_hash"),
-        }),
-        Ok(None) => None,
-        Err(e) => {
-            error!("DB find_user failed: {}", e);
-            None
-        }
+        }))
     }
 }

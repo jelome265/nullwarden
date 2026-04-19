@@ -1,6 +1,7 @@
 use crate::{
     auth::{jwt, password, token},
-    db::{pool::SharedState, users},
+    db::pool::SharedState,
+    error::{AppError, AppResult},
 };
 use axum::{
     extract::State,
@@ -29,34 +30,49 @@ pub struct AuthResponse {
 pub async fn register(
     State(state): State<SharedState>,
     Json(payload): Json<AuthRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let hash = password::hash_password(&state, &payload.password)
+) -> AppResult<StatusCode> {
+    let hash = password::hash_password(&state.config, &payload.password).await?;
+
+    state
+        .users
+        .insert_user(payload.username, hash)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    users::insert_user(&state, payload.username, hash)
-        .await
-        .ok_or(StatusCode::CONFLICT)?;
+        .map_err(|e| {
+            if let Some(db_err) = e.as_database_error() {
+                if db_err.is_unique_violation() {
+                    return AppError::Conflict("User already exists".to_string());
+                }
+            }
+            AppError::Database(e)
+        })?;
+
     Ok(StatusCode::CREATED)
 }
 
 pub async fn login(
     State(state): State<SharedState>,
     Json(payload): Json<AuthRequest>,
-) -> Result<Json<AuthResponse>, StatusCode> {
-    let user = users::find_user(&state, &payload.username)
-        .await
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    let ok = password::verify_password(&user.password_hash, &payload.password)
-        .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    if !ok {
-        return Err(StatusCode::UNAUTHORIZED);
+) -> AppResult<Json<AuthResponse>> {
+    let user_opt = state.users.find_user(&payload.username).await?;
+
+    // C-02: Always verify a hash to prevent timing oracle for username enumeration
+    let hash = user_opt
+        .as_ref()
+        .map(|u| u.password_hash.as_str())
+        .unwrap_or(&state.dummy_hash);
+
+    let ok = password::verify_password(hash, &payload.password).await?;
+
+    if !ok || user_opt.is_none() {
+        return Err(AppError::Unauthorized(
+            "Invalid username or password".to_string(),
+        ));
     }
-    let access_token =
-        jwt::issue_access_token(&state, user.id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let refresh_token = token::issue_refresh_token(&state, user.id)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let user = user_opt.unwrap();
+    let access_token = jwt::issue_access_token(&state, user.id)?;
+    let refresh_token = token::issue_refresh_token(&state, user.id).await?;
+
     Ok(Json(AuthResponse {
         access_token,
         refresh_token,
@@ -66,15 +82,12 @@ pub async fn login(
 pub async fn refresh(
     State(state): State<SharedState>,
     Json(payload): Json<RefreshRequest>,
-) -> Result<Json<AuthResponse>, StatusCode> {
-    let user_id = token::consume_refresh_token(&state, &payload.refresh_token)
-        .await
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    let access_token =
-        jwt::issue_access_token(&state, user_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let refresh_token = token::issue_refresh_token(&state, user_id)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+) -> AppResult<Json<AuthResponse>> {
+    let user_id = token::consume_refresh_token(&state, &payload.refresh_token).await?;
+
+    let access_token = jwt::issue_access_token(&state, user_id)?;
+    let refresh_token = token::issue_refresh_token(&state, user_id).await?;
+
     Ok(Json(AuthResponse {
         access_token,
         refresh_token,
@@ -85,8 +98,7 @@ pub async fn logout(
     State(state): State<SharedState>,
     headers: HeaderMap,
     Json(payload): Json<RefreshRequest>,
-) -> Result<StatusCode, StatusCode> {
-    // 1. Block access token if present
+) -> AppResult<StatusCode> {
     if let Some(auth_header) = headers.get(axum::http::header::AUTHORIZATION) {
         if let Ok(auth_str) = auth_header.to_str() {
             if let Some(token) = auth_str.strip_prefix("Bearer ") {
@@ -95,7 +107,7 @@ pub async fn logout(
         }
     }
 
-    // 2. Revoke refresh token
+    // Best effort revocation
     let _ = token::consume_refresh_token(&state, &payload.refresh_token).await;
 
     Ok(StatusCode::NO_CONTENT)
