@@ -8,15 +8,25 @@ pub struct Config {
     pub vault_path: PathBuf,
 }
 
+pub const DEFAULT_SERVER_URL: &str = "http://127.0.0.1:8080";
+
 impl Default for Config {
     fn default() -> Self {
         let data_dir = dirs::data_local_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("nullwarden");
         Self {
-            server_url: "http://127.0.0.1:8080".to_string(),
+            server_url: DEFAULT_SERVER_URL.to_string(),
             vault_path: data_dir.join("vault.nw"),
         }
+    }
+}
+
+pub fn warn_if_default_server_url(config: &Config, command: &str) {
+    if config.server_url == DEFAULT_SERVER_URL {
+        eprintln!(
+            "Warning: `{command}` is using the default server URL ({DEFAULT_SERVER_URL}). Configure `server_url` before using a real sync server."
+        );
     }
 }
 

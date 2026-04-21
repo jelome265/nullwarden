@@ -31,6 +31,7 @@ pub async fn register(
     State(state): State<SharedState>,
     Json(payload): Json<AuthRequest>,
 ) -> AppResult<StatusCode> {
+    validate_username(&payload.username)?;
     let hash = password::hash_password(&state.config, &payload.password).await?;
 
     state
@@ -53,6 +54,7 @@ pub async fn login(
     State(state): State<SharedState>,
     Json(payload): Json<AuthRequest>,
 ) -> AppResult<Json<AuthResponse>> {
+    validate_username(&payload.username)?;
     let user_opt = state.users.find_user(&payload.username).await?;
 
     // C-02: Always verify a hash to prevent timing oracle for username enumeration
@@ -111,4 +113,23 @@ pub async fn logout(
     let _ = token::consume_refresh_token(&state, &payload.refresh_token).await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn delete_user(
+    State(state): State<SharedState>,
+    user: crate::middleware::auth::CurrentUser,
+) -> AppResult<StatusCode> {
+    token::revoke_all_user_tokens(&state, user.id).await?;
+    state.users.delete_user(user.id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+fn validate_username(username: &str) -> AppResult<()> {
+    let len = username.chars().count();
+    if !(3..=64).contains(&len) {
+        return Err(AppError::BadRequest(
+            "username must be between 3 and 64 characters".to_string(),
+        ));
+    }
+    Ok(())
 }

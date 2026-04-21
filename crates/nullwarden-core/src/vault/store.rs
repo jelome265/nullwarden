@@ -99,5 +99,12 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
     }
 
     fs::rename(&tmp_path, path)?;
+
+    #[cfg(unix)]
+    if let Some(parent) = path.parent() {
+        let dir = fs::File::open(parent)?;
+        dir.sync_all()?;
+    }
+
     Ok(())
 }

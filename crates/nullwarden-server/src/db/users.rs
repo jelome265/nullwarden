@@ -40,4 +40,13 @@ impl UserRepository for SqlxUserRepository {
             password_hash: row.get::<String, _>("password_hash"),
         }))
     }
+
+    async fn delete_user(&self, user_id: Uuid) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.rows_affected())
+    }
 }

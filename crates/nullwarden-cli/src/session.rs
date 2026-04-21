@@ -2,6 +2,8 @@ use anyhow::Context;
 use keyring::Entry;
 use std::fs;
 use std::path::PathBuf;
+#[cfg(windows)]
+use std::process::Command;
 
 pub fn save_access_token(token: &str) -> anyhow::Result<()> {
     if let Err(e) = save_to_keyring("access_token", token) {
@@ -86,6 +88,8 @@ fn save_to_file(account: &str, secret: &str) -> anyhow::Result<()> {
     #[cfg(not(unix))]
     {
         fs::write(&path, secret)?;
+        #[cfg(windows)]
+        tighten_windows_acl(&path)?;
     }
 
     Ok(())
@@ -101,5 +105,22 @@ fn clear_from_file(account: &str) -> anyhow::Result<()> {
     if path.exists() {
         fs::remove_file(path)?;
     }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn tighten_windows_acl(path: &std::path::Path) -> anyhow::Result<()> {
+    let status = Command::new("icacls")
+        .arg(path)
+        .arg("/inheritance:r")
+        .arg("/grant:r")
+        .arg(format!("{}:F", std::env::var("USERNAME").unwrap_or_else(|_| "Users".to_string())))
+        .status()
+        .context("failed to invoke icacls for session file ACL hardening")?;
+
+    if !status.success() {
+        anyhow::bail!("icacls failed while securing session file permissions");
+    }
+
     Ok(())
 }

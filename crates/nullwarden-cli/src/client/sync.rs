@@ -1,6 +1,7 @@
 use anyhow::Context;
 use reqwest::Client;
 use std::path::Path;
+use tokio::time::{sleep, Duration};
 
 #[derive(Clone)]
 pub struct SyncClient {
@@ -40,7 +41,10 @@ impl SyncClient {
             request = request.header("X-If-Match", expected_version.to_string());
         }
 
-        let response = request.send().await.context("push request failed")?;
+        let response = self
+            .send_with_retry(request, "push")
+            .await
+            .context("push request failed")?;
 
         if response.status() == reqwest::StatusCode::CONFLICT {
             return Err(crate::error::CliError::SyncConflict.into());
@@ -69,7 +73,10 @@ impl SyncClient {
             request = request.bearer_auth(token);
         }
         let response = request
-            .send()
+            .try_clone()
+            .context("failed to clone pull request")?;
+        let response = self
+            .send_with_retry(response, "pull")
             .await
             .context("pull request failed")?
             .error_for_status()
@@ -97,4 +104,44 @@ impl SyncClient {
 
         Ok((version, bytes.to_vec()))
     }
+
+    async fn send_with_retry(
+        &self,
+        request: reqwest::RequestBuilder,
+        _operation: &str,
+    ) -> anyhow::Result<reqwest::Response> {
+        for attempt in 0..3u32 {
+            let cloned = request
+                .try_clone()
+                .context("failed to clone outbound request")?;
+
+            match cloned.send().await {
+                Ok(response) => return Ok(response),
+                Err(err) if should_retry(&err) && attempt < 2 => {
+                    sleep(Duration::from_millis(250 * (1 << attempt))).await;
+                }
+                Err(err) => {
+                    return Err(map_network_error(err, &self.base_url));
+                }
+            }
+        }
+
+        unreachable!("retry loop always returns or errors")
+    }
+}
+
+fn should_retry(err: &reqwest::Error) -> bool {
+    err.is_connect() || err.is_timeout() || err.is_request()
+}
+
+fn map_network_error(err: reqwest::Error, base_url: &str) -> anyhow::Error {
+    if should_retry(&err) {
+        return crate::error::CliError::ServerUnavailable {
+            url: base_url.to_string(),
+            source: err,
+        }
+        .into();
+    }
+
+    anyhow::Error::new(err)
 }

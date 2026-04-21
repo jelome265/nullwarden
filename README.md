@@ -113,8 +113,8 @@ The common root cause across P2, P5, and P6 is **misplaced trust boundary placem
 | Vault format spec | Binary layout: version byte, KDF params, salt, nonce, ciphertext, format documented |
 | Authentication | Argon2id password hashing server-side, JWT session tokens (short-lived), refresh token rotation |
 | Conflict detection | Optimistic locking via version counter, client-side conflict resolution prompt |
-| Static binary build | `x86_64-unknown-linux-musl` and `x86_64-pc-windows-msvc` targets via cross-compilation |
-| Release signing | `cosign` or `minisign` for release artifact signing |
+| Static binary build | Linux musl, Windows MSVC, and macOS targets via cross-compilation/release matrix |
+| Release signing | `minisign` signatures plus `SHA256SUMS` |
 | Test suite | Unit (crypto), integration (sync), property-based (fuzz) |
 | Security documentation | Threat model, attack assumptions, security design rationale |
 
@@ -419,7 +419,7 @@ Recovery:  Client prompts user; user chooses: keep local, keep remote, or manual
 | D7 | Threat model and security design document | Security | M4 (Wk 10) |
 | D8 | Test suite: unit (≥ 80% coverage), integration, fuzz | All | M4 (Wk 10) |
 | D9 | OpenAPI 3.1 spec for server API | Backend eng | M4 (Wk 10) |
-| D10 | Signed release binaries (Linux musl + Windows MSVC) | DevOps | M5 (Wk 12) |
+| D10 | Signed release binaries (Linux musl + Windows/macOS targets) | DevOps | M5 (Wk 12) |
 | D11 | Docker image for `nullwarden-server` | DevOps | M5 (Wk 12) |
 | D12 | Deployment guide + operator runbook | All | M5 (Wk 12) |
 | D13 | SBOM (Software Bill of Materials) per release | DevOps | M5 (Wk 12) |
@@ -547,10 +547,10 @@ INVARIANT 6: Vault writes MUST be atomic (write-temp → fsync → rename patter
 | **ID** | FR7 |
 | **Title** | Retrieve Vault Entry |
 | **Priority** | MUST |
-| **Description** | The CLI shall retrieve a named entry, decrypt it, and display it to the user. The password field shall be optionally copied to clipboard (cleared after 30 seconds) rather than printed to stdout. |
+| **Description** | The CLI shall retrieve a named entry, decrypt it, and display it to the user. The password field shall be optionally copied to clipboard rather than printed to stdout. |
 | **Input** | Service name or UUID; master password (if vault not unlocked) |
 | **Output** | Entry fields. Password to clipboard or stdout per flag. |
-| **Security** | Clipboard cleared after 30 s. Password field not written to shell history. |
+| **Security** | Clipboard managers may retain copied passwords. Password field not written to shell history unless the user passes it on the command line. |
 
 ### FR8 — List Entries
 
@@ -815,7 +815,7 @@ Offset  Size   Field              Description
 14      4      kdf_p_cost         Argon2 parallelism — u32 LE
 18      32     salt               KDF salt (CSPRNG, 32 bytes)
 50      24     nonce              XChaCha20 nonce (CSPRNG, 24 bytes)
-74      8      payload_len        Length of encrypted payload — u64 LE
+73      ...    ciphertext         XChaCha20-Poly1305 ciphertext + tag
 82      N      ciphertext         Encrypted MessagePack payload (N bytes)
 82+N    16     aead_tag           Poly1305 authentication tag (16 bytes)
 ```
@@ -850,7 +850,7 @@ Payload (plaintext before encryption, MessagePack encoded):
 │ + kdf_params: KdfParams             │
 │ + salt: [u8; 32]                    │
 │ + nonce: [u8; 24]                   │
-│ + payload_len: u64                  │
+│ + ciphertext: [u8]                  │
 ├─────────────────────────────────────┤
 │ + serialize() → Vec<u8>             │
 │ + deserialize(bytes) → Result<Self> │
@@ -1090,7 +1090,7 @@ Constraints:
 | **Name** | Retrieve Password |
 | **Actor** | Authenticated User |
 | **Trigger** | User runs `nullwarden get github.com` |
-| **Main Flow** | 1. Vault decrypted. 2. Entry matching service name returned. 3. Password copied to clipboard (cleared after 30 s) or printed to stdout per `--print` flag. 4. Key and plaintext zeroized. |
+| **Main Flow** | 1. Vault decrypted. 2. Entry matching service name returned. 3. Password copied to clipboard or printed to stdout per `--print` flag. 4. Key and plaintext zeroized. |
 | **Alternate Flow** | 3a. `--print` flag set → password written to stdout (user accepts risk). |
 | **Exception Flow** | 2a. No matching entry → "Entry not found." |
 
@@ -1268,7 +1268,7 @@ Steps:
   4. Assert version byte = 0x01
   5. Assert salt length = 32 bytes
   6. Assert nonce length = 24 bytes
-  7. Assert payload_len > 0
+  7. Assert ciphertext length > 0
 Expected: All assertions pass
 ```
 
@@ -1566,7 +1566,7 @@ nullwarden/
 │   │   │   ├── crypto_roundtrip.rs   # UT-02, UT-03
 │   │   │   ├── kdf_params.rs         # UT-04
 │   │   │   ├── vault_lifecycle.rs    # UT-01, UT-06, UT-07
-│   │   │   ├── zeroize.rs            # UT-05 (unsafe, cfg(test))
+│   │   │   ├── duplicate_entry.rs    # UT duplicate title rejection
 │   │   │   └── atomic_write.rs       # UT fault injection
 │   │   └── benches/
 │   │       ├── kdf_bench.rs          # criterion: Argon2id timing gate
@@ -1631,10 +1631,9 @@ nullwarden/
 │   │   │   ├── 20260102_create_vaults.sql
 │   │   │   └── 20260103_create_refresh_tokens.sql
 │   │   └── tests/
-│   │       ├── auth_integration.rs   # IT-01 through IT-04
-│   │       ├── vault_integration.rs  # IT-05, IT-06
-│   │       ├── conflict_test.rs      # IT-02 concurrent push
-│   │       └── rate_limit_test.rs    # IT-03
+│   │       ├── auth_integration.rs   # auth flow integration coverage
+│   │       ├── vault_integration.rs  # vault flow and conflict coverage
+│   │       └── support.rs            # in-memory integration harness
 │   │
 │   └── nullwarden-fuzz/              # Fuzz targets (cargo-fuzz)
 │       ├── Cargo.toml

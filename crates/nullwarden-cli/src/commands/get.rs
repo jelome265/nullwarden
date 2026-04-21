@@ -21,18 +21,11 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
         let mut cb = Clipboard::new().context("failed to access clipboard")?;
         cb.set_text(entry.password.0.clone())
             .context("failed to copy to clipboard")?;
-        println!("Password copied to clipboard. Clear it manually after use.");
+        println!("Password copied to clipboard. If you use a clipboard manager, clear its history after use.");
     }
 
     if let Some(notes) = &entry.notes {
         println!("notes: {notes}");
     }
-
-    // We need to wait a bit or the process might exit before the spawned task starts?
-    // Actually, if the process exits, the clipboard content might remain depending on OS,
-    // but the background clear task will die.
-    // Password managers usually run a daemon or stay alive.
-    // For now, I'll just print a message.
-
     Ok(())
 }
