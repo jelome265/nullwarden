@@ -17,6 +17,10 @@ pub struct Config {
     pub jwt_access_expire_secs: i64,
     #[serde(default = "default_refresh_expire")]
     pub jwt_refresh_expire_days: i64,
+    #[serde(default = "default_jwt_issuer")]
+    pub jwt_issuer: String,
+    #[serde(default = "default_jwt_audience")]
+    pub jwt_audience: String,
     #[serde(default = "default_m_cost")]
     pub auth_argon2_m_cost: u32,
     #[serde(default = "default_t_cost")]
@@ -25,6 +29,10 @@ pub struct Config {
     pub auth_argon2_p_cost: u32,
     pub tls_cert_path: Option<String>,
     pub tls_key_path: Option<String>,
+    #[serde(default = "default_db_max_connections")]
+    pub db_max_connections: u32,
+    #[serde(default = "default_cleanup_interval")]
+    pub cleanup_interval_secs: u64,
 }
 
 fn default_host() -> String {
@@ -45,6 +53,12 @@ fn default_access_expire() -> i64 {
 fn default_refresh_expire() -> i64 {
     7
 }
+fn default_jwt_issuer() -> String {
+    "nullwarden-server".to_string()
+}
+fn default_jwt_audience() -> String {
+    "nullwarden-cli".to_string()
+}
 fn default_m_cost() -> u32 {
     65536
 }
@@ -53,6 +67,12 @@ fn default_t_cost() -> u32 {
 }
 fn default_p_cost() -> u32 {
     4
+}
+fn default_db_max_connections() -> u32 {
+    10
+}
+fn default_cleanup_interval() -> u64 {
+    3600
 }
 
 impl Config {

@@ -13,6 +13,10 @@
 | `JWT_SECRET` | Signing key for session tokens | REQUIRED |
 | `SERVER_HOST` | Interface to bind to | `0.0.0.0` |
 | `SERVER_PORT` | Port to listen on | `8080` |
+| `JWT_ISSUER` | JWT issuer claim value | `nullwarden-server` |
+| `JWT_AUDIENCE` | JWT audience claim value | `nullwarden-cli` |
+| `DB_MAX_CONNECTIONS` | PostgreSQL pool size | `10` |
+| `CLEANUP_INTERVAL_SECS` | Background cleanup interval for expired tokens/blocklist rows | `3600` |
 | `TLS_CERT_PATH` | Path to TLS certificate | None |
 | `TLS_KEY_PATH` | Path to TLS private key | None |
 
@@ -28,3 +32,19 @@ To manually run migrations:
 ```bash
 ./scripts/db-migrate.sh
 ```
+
+## JWT Secret Rotation
+
+Recommended zero-downtime procedure:
+
+1. Generate a new 256-bit `JWT_SECRET`.
+2. Shorten access-token lifetime temporarily if you want faster cutover.
+3. Deploy the new secret to all server instances at once.
+4. Keep refresh-token storage intact. Existing refresh tokens remain valid and will mint new access tokens under the new secret.
+5. Expect all existing access tokens to stop working immediately after the rollout. Users will transparently recover on refresh or will need to log in again if they only hold an expired/blocked access token.
+6. If compromise is suspected, revoke refresh tokens as well and notify users to re-authenticate.
+
+## Incident Response Pointers
+
+- Use [incident-response.md](incident-response.md) for compromise, corruption, and rollback procedures.
+- Maintain regular PostgreSQL backups and validate restoration before production go-live.

@@ -23,7 +23,7 @@ paths:
                 password:
                   type: string
       responses:
-        "200":
+        "201":
           description: Successfully registered
   /auth/login:
     post:
@@ -92,6 +92,14 @@ paths:
       responses:
         "204":
           description: Successfully logged out
+  /auth/user:
+    delete:
+      summary: Delete the authenticated user account
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: User deleted and dependent data removed
   /vault:
     get:
       summary: Get user vault
@@ -116,6 +124,11 @@ paths:
           required: false
           schema:
             type: integer
+        - in: header
+          name: X-Force
+          required: false
+          schema:
+            type: boolean
       requestBody:
         required: true
         content:

@@ -12,21 +12,76 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
           - os: ubuntu-latest
-            target: x86_64-pc-windows-gnu
+            target: aarch64-unknown-linux-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-cyclonedx
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release -p nullwarden-cli --target ${{ matrix.target }}
+      - name: Generate SBOM
+        shell: bash
+        run: cargo cyclonedx
       - name: Sign with minisign
+        shell: bash
         run: |
+          BIN_PATH=target/${{ matrix.target }}/release/nullwarden-cli
+          if [ -f "${BIN_PATH}.exe" ]; then
+            BIN_PATH="${BIN_PATH}.exe"
+          fi
           echo "${{ secrets.MINISIGN_SECRET_KEY }}" | minisign -S -s /dev/stdin \
-            -m target/${{ matrix.target }}/release/nullwarden-cli \
-            -x target/${{ matrix.target }}/release/nullwarden-cli.minisig
+            -m "${BIN_PATH}" \
+            -x "${BIN_PATH}.minisig"
+      - name: Generate checksums
+        shell: bash
+        run: |
+          if [ -f target/${{ matrix.target }}/release/nullwarden-cli.exe ]; then
+            shasum -a 256 target/${{ matrix.target }}/release/nullwarden-cli.exe target/${{ matrix.target }}/release/nullwarden-cli.exe.minisig > target/${{ matrix.target }}/release/SHA256SUMS
+          else
+            shasum -a 256 target/${{ matrix.target }}/release/nullwarden-cli target/${{ matrix.target }}/release/nullwarden-cli.minisig > target/${{ matrix.target }}/release/SHA256SUMS
+          fi
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: nullwarden-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/nullwarden-cli*
+            target/${{ matrix.target }}/release/SHA256SUMS
+            bom.xml
+            *.cdx.xml
+            *.cdx.json
+
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/nullwarden-server
+          tags: |
+            type=ref,event=tag
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

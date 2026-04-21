@@ -1,6 +1,5 @@
 use crate::config::Config;
-use crate::db::{UserRepository, VaultRepository};
-use sqlx::PgPool;
+use crate::db::{RefreshTokenRepository, TokenBlocklistRepository, UserRepository, VaultRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -20,37 +19,28 @@ pub struct StoredVault {
 
 pub struct AppState {
     pub config: Config,
-    pub db: PgPool,
     pub users: Arc<dyn UserRepository>,
     pub vaults: Arc<dyn VaultRepository>,
+    pub refresh_tokens: Arc<dyn RefreshTokenRepository>,
+    pub token_blocklist: Arc<dyn TokenBlocklistRepository>,
     pub dummy_hash: String, // C-02: To prevent login timing oracle
 }
 
 impl AppState {
-    pub async fn new(config: Config) -> anyhow::Result<Self> {
-        let url = config
-            .database_url
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("DATABASE_URL must be set for persistent storage"))?;
-        let _db = PgPool::connect(url).await?;
-
-        Err(anyhow::anyhow!(
-            "AppState::new is deprecated. Use AppState::init instead."
-        ))
-    }
-
     pub fn init(
         config: Config,
-        db: PgPool,
         users: Arc<dyn UserRepository>,
         vaults: Arc<dyn VaultRepository>,
+        refresh_tokens: Arc<dyn RefreshTokenRepository>,
+        token_blocklist: Arc<dyn TokenBlocklistRepository>,
         dummy_hash: String,
     ) -> Self {
         Self {
             config,
-            db,
             users,
             vaults,
+            refresh_tokens,
+            token_blocklist,
             dummy_hash,
         }
     }

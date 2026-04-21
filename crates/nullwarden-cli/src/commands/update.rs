@@ -21,6 +21,7 @@ pub async fn run(
         .context("failed to unlock vault")?;
 
     if let Some(ref p) = password {
+        eprintln!("Warning: providing passwords as command-line arguments can leak them via shell history or process inspection.");
         validate_password_strength(p)?;
     }
 

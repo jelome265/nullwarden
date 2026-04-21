@@ -14,7 +14,10 @@ pub async fn run(
     let config = Config::load()?;
     let master_password = prompt_password("Master password")?;
     let entry_password = match password {
-        Some(value) => value,
+        Some(value) => {
+            eprintln!("Warning: providing passwords as command-line arguments can leak them via shell history or process inspection.");
+            value
+        }
         None => prompt_password("Entry password")?,
     };
     validate_password_strength(&entry_password)?;

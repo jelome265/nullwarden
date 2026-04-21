@@ -7,7 +7,10 @@ use crate::{
 pub async fn run(username: String, password: Option<String>) -> anyhow::Result<()> {
     let config = Config::load()?;
     let password = match password {
-        Some(value) => value,
+        Some(value) => {
+            eprintln!("Warning: providing passwords as command-line arguments can leak them via shell history or process inspection.");
+            value
+        }
         None => prompt_password("Account password")?,
     };
     validate_password_strength(&password)?;

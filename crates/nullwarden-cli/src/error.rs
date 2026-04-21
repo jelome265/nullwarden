@@ -16,6 +16,8 @@ pub enum CliError {
     Vault(#[from] nullwarden_core::VaultError),
     #[error("Sync conflict: remote vault has been updated by another device")]
     SyncConflict,
+    #[error("Cannot reach NullWarden server at {url}. Is the server running? {source}")]
+    ServerUnavailable { url: String, source: reqwest::Error },
     #[error("Input error: {0}")]
     Input(String),
     #[error("Keyring error: {0}")]

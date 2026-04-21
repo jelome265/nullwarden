@@ -1,22 +1,29 @@
 use nullwarden_server::{
-    app::build_router, auth::password, config::Config, db::pool::AppState,
+    app::build_router,
+    auth::{jwt, password, token},
+    config::Config,
+    db::pool::AppState,
+    db::tokens::{SqlxRefreshTokenRepository, SqlxTokenBlocklistRepository},
     db::users::SqlxUserRepository, db::vaults::SqlxVaultRepository,
 };
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().json().init();
     let config = Config::from_env()?;
 
     let db_url = config
         .database_url
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("DATABASE_URL must be set"))?;
-    let db = PgPool::connect(db_url).await?;
+    let db = PgPoolOptions::new()
+        .max_connections(config.db_max_connections)
+        .connect(db_url)
+        .await?;
 
     // Run migrations
     sqlx::migrate!("./migrations").run(&db).await?;
@@ -27,14 +34,36 @@ async fn main() -> anyhow::Result<()> {
     // Initialize repositories
     let users = Arc::new(SqlxUserRepository { pool: db.clone() });
     let vaults = Arc::new(SqlxVaultRepository { pool: db.clone() });
+    let refresh_tokens = Arc::new(SqlxRefreshTokenRepository { pool: db.clone() });
+    let token_blocklist = Arc::new(SqlxTokenBlocklistRepository { pool: db.clone() });
 
     let state = Arc::new(AppState::init(
         config.clone(),
-        db,
         users,
         vaults,
+        refresh_tokens,
+        token_blocklist,
         dummy_hash,
     ));
+
+    let cleanup_state = state.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+            cleanup_state.config.cleanup_interval_secs,
+        ));
+
+        loop {
+            interval.tick().await;
+
+            if let Err(err) = token::cleanup_expired_tokens(&cleanup_state).await {
+                tracing::warn!("failed to clean expired refresh tokens: {err:?}");
+            }
+
+            if let Err(err) = jwt::cleanup_blocked_tokens(&cleanup_state).await {
+                tracing::warn!("failed to clean expired blocklisted tokens: {err:?}");
+            }
+        }
+    });
 
     let app = build_router(state);
     let addr: SocketAddr = format!("{}:{}", config.server_host, config.server_port).parse()?;

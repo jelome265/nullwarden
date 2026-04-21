@@ -1,5 +1,8 @@
 use crate::{
-    client::sync::SyncClient, config::Config, input::prompt_password, session::load_access_token,
+    client::sync::SyncClient,
+    config::{warn_if_default_server_url, Config},
+    input::prompt_password,
+    session::load_access_token,
     sync_state::SyncState,
 };
 use anyhow::Context;
@@ -7,6 +10,7 @@ use nullwarden_core::vault::VaultStore;
 
 pub async fn run() -> anyhow::Result<()> {
     let config = Config::load()?;
+    warn_if_default_server_url(&config, "pull");
     let token = load_access_token()?;
     let mut sync_state = SyncState::load(&config.vault_path)?;
 
@@ -21,7 +25,7 @@ pub async fn run() -> anyhow::Result<()> {
         .unlock_bytes(&master_password, &bytes)
         .context("failed to decrypt downloaded vault (integrity check failed)")?;
 
-    tokio::fs::write(&config.vault_path, bytes)
+    tokio::fs::write(&config.vault_path, &bytes)
         .await
         .context("failed to write local vault")?;
 

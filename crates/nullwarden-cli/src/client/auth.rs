@@ -38,7 +38,7 @@ impl AuthClient {
             })
             .send()
             .await
-            .context("register request failed")?
+            .map_err(|err| map_network_error(err, &self.base_url))?
             .error_for_status()
             .context("register response was not successful")?;
 
@@ -48,7 +48,7 @@ impl AuthClient {
             .json(&AuthRequest { username, password })
             .send()
             .await
-            .context("login request failed")?
+            .map_err(|err| map_network_error(err, &self.base_url))?
             .error_for_status()
             .context("login response was not successful")?
             .json::<AuthResponse>()
@@ -67,9 +67,21 @@ impl AuthClient {
             .json(&serde_json::json!({ "refresh_token": refresh_token }))
             .send()
             .await
-            .context("logout request failed")?
+            .map_err(|err| map_network_error(err, &self.base_url))?
             .error_for_status()
             .context("logout response was not successful")?;
         Ok(())
     }
+}
+
+fn map_network_error(err: reqwest::Error, base_url: &str) -> anyhow::Error {
+    if err.is_connect() || err.is_timeout() || err.is_request() {
+        return crate::error::CliError::ServerUnavailable {
+            url: base_url.to_string(),
+            source: err,
+        }
+        .into();
+    }
+
+    anyhow::Error::new(err)
 }
