@@ -94,6 +94,21 @@ async fn backup_current_vault(
     .bind(user_id)
     .execute(&mut **tx)
     .await?;
+
+    // Cap history at 3 versions per user
+    sqlx::query(
+        "DELETE FROM vault_history
+         WHERE user_id = $1 AND id NOT IN (
+             SELECT id FROM vault_history
+             WHERE user_id = $1
+             ORDER BY created_at DESC
+             LIMIT 3
+         )",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
     Ok(())
 }
 
@@ -110,5 +125,20 @@ async fn backup_current_vault_if_version_matches(
     .bind(expected_version as i64)
     .execute(&mut **tx)
     .await?;
+
+    // Cap history at 3 versions per user
+    sqlx::query(
+        "DELETE FROM vault_history
+         WHERE user_id = $1 AND id NOT IN (
+             SELECT id FROM vault_history
+             WHERE user_id = $1
+             ORDER BY created_at DESC
+             LIMIT 3
+         )",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
     Ok(())
 }
