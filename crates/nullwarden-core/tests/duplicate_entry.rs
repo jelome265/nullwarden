@@ -1,25 +1,27 @@
-use nullwarden_core::{vault::VaultData, VaultError};
+use nullwarden_core::vault::VaultData;
+use nullwarden_core::error::VaultError;
 
 #[test]
-fn add_entry_rejects_duplicate_titles() {
+fn test_duplicate_entry_error() {
     let mut vault = VaultData::default();
     vault
         .add_entry(
-            "example".to_string(),
+            "github".to_string(),
             "alice".to_string(),
-            "super-secret-password".to_string(),
+            "secret".to_string(),
             None,
         )
-        .unwrap();
-
-    let err = vault
-        .add_entry(
-            "example".to_string(),
-            "bob".to_string(),
-            "another-secret-password".to_string(),
-            None,
-        )
-        .unwrap_err();
-
-    assert!(matches!(err, VaultError::DuplicateEntry));
+        .expect("first add should succeed");
+    
+    let res = vault.add_entry(
+        "github".to_string(),
+        "bob".to_string(),
+        "secret2".to_string(),
+        None,
+    );
+    
+    match res {
+        Err(VaultError::DuplicateEntry) => (),
+        _ => panic!("Expected DuplicateEntry error, got {:?}", res),
+    }
 }
