@@ -18,7 +18,12 @@
 | `DB_MAX_CONNECTIONS` | PostgreSQL pool size | `10` |
 | `CLEANUP_INTERVAL_SECS` | Background cleanup interval for expired tokens/blocklist rows | `3600` |
 | `TLS_CERT_PATH` | Path to TLS certificate | None |
-| `TLS_KEY_PATH` | Path to TLS private key | None |
+| TLS_KEY_PATH | Path to TLS private key | None |
+
+### Supabase Configuration
+- **Connection String:** Use the **Direct Connection** string (e.g., `postgresql://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:5432/postgres`) rather than the transaction pooler URL for best compatibility with SQLx.
+- **Connection Pool:** Set `DB_MAX_CONNECTIONS` based on your Supabase tier. For the Free tier, a value of `50` is recommended to stay within the 60-connection limit while leaving room for migrations and dashboard access.
+
 
 ## Security Hardening
 1. **Enable TLS:** Always provide `TLS_CERT_PATH` and `TLS_KEY_PATH` in production.

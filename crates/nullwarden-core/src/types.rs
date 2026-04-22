@@ -2,6 +2,14 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+/// A string that is zeroized from memory when dropped.
+/// 
+/// # Warning
+/// 
+/// The `Serialize` implementation for this type emits the **plaintext** string.
+/// This is intended for encrypted storage (e.g. MessagePack vaults) but means
+/// this type must **never** be used as a field in a struct that is serialized
+/// to JSON for an HTTP response (e.g. in a server handler).
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct SecretString(pub String);
 
