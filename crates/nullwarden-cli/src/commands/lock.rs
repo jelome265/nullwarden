@@ -7,6 +7,7 @@ pub async fn run() -> anyhow::Result<()> {
 
     println!("NullWarden CLI session locked.");
     println!("Session tokens have been cleared from the keyring.");
+    println!("Note: Your access token may still be valid on the server until it expires.");
     println!("Master password material is never persisted in memory between commands.");
     Ok(())
 }
