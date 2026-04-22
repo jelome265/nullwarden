@@ -6,6 +6,7 @@ pub mod init;
 pub mod list;
 pub mod lock;
 pub mod logout;
+pub mod migrate;
 pub mod pull;
 pub mod push;
 pub mod register;
