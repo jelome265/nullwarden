@@ -4,7 +4,8 @@ use nullwarden_server::{
     config::Config,
     db::pool::AppState,
     db::tokens::{SqlxRefreshTokenRepository, SqlxTokenBlocklistRepository},
-    db::users::SqlxUserRepository, db::vaults::SqlxVaultRepository,
+    db::users::SqlxUserRepository,
+    db::vaults::SqlxVaultRepository,
 };
 use sqlx::postgres::PgPoolOptions;
 use std::{net::SocketAddr, sync::Arc};

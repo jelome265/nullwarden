@@ -5,7 +5,6 @@ use constant_time_eq::constant_time_eq;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-
 /// Issues a new refresh token for a user.
 /// Returns a string in the format "token_id:secret".
 pub async fn issue_refresh_token(state: &SharedState, user_id: Uuid) -> anyhow::Result<String> {
@@ -65,7 +64,10 @@ pub async fn revoke_all_user_tokens(state: &SharedState, user_id: Uuid) -> anyho
 
 /// Cleanup expired tokens.
 pub async fn cleanup_expired_tokens(state: &SharedState) -> anyhow::Result<u64> {
-    Ok(state.refresh_tokens.cleanup_expired_tokens(Utc::now()).await?)
+    Ok(state
+        .refresh_tokens
+        .cleanup_expired_tokens(Utc::now())
+        .await?)
 }
 
 fn sha256_hex(secret: &str) -> String {

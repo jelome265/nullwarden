@@ -85,7 +85,11 @@ async fn main() -> anyhow::Result<()> {
         Command::List => list::run().await?,
         Command::Delete { title } => delete::run(title).await?,
         Command::Export { output } => export::run(output).await?,
-        Command::Migrate { m_cost, t_cost, p_cost } => migrate::run(m_cost, t_cost, p_cost).await?,
+        Command::Migrate {
+            m_cost,
+            t_cost,
+            p_cost,
+        } => migrate::run(m_cost, t_cost, p_cost).await?,
         Command::Lock => lock::run().await?,
         Command::Register { username, password } => register::run(username, password).await?,
         Command::Push => push::run().await?,

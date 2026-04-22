@@ -5,10 +5,7 @@ use axum::http::{header, Method, Request, StatusCode};
 use support::test_app;
 use tower::ServiceExt;
 
-async fn request(
-    app: axum::Router,
-    request: Request<Body>,
-) -> axum::response::Response {
+async fn request(app: axum::Router, request: Request<Body>) -> axum::response::Response {
     app.oneshot(request).await.unwrap()
 }
 

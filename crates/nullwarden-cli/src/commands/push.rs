@@ -61,7 +61,8 @@ pub async fn run() -> anyhow::Result<()> {
                         println!("Vault push completed (version {})", new_version);
                     }
                     1 => {
-                        apply_remote_bytes(&config.vault_path, remote_version, remote_bytes).await?;
+                        apply_remote_bytes(&config.vault_path, remote_version, remote_bytes)
+                            .await?;
                         sync_state.last_version = remote_version;
                         sync_state.save(&config.vault_path)?;
                         println!("Vault pull completed (version {})", remote_version);
@@ -120,7 +121,9 @@ async fn load_conflict_context(
 ) -> anyhow::Result<(usize, usize, u64, Vec<u8>)> {
     let master_password = prompt_password("Master password (for conflict review)")?;
     let store = VaultStore::new(vault_path);
-    let local_vault = store.unlock(&master_password).context("failed to unlock local vault")?;
+    let local_vault = store
+        .unlock(&master_password)
+        .context("failed to unlock local vault")?;
     let (remote_version, remote_bytes) = client.pull(current_version).await?;
     let remote_vault = store
         .unlock_bytes(&master_password, &remote_bytes)
