@@ -112,3 +112,43 @@ async fn test_sync_push_pull_flow() {
     assert_eq!(vault2.entries.len(), 1);
     assert_eq!(vault2.get_entry("svc").unwrap().username, "user");
 }
+
+#[tokio::test]
+async fn test_sync_pull_rollback_detection() {
+    let dir = tempdir().unwrap();
+    let vault_path = dir.path().join("vault.nwd");
+    let master_password = "sync-test-password-123!";
+
+    // 1. Setup local vault at version 5
+    let store = VaultStore::new(&vault_path);
+    let vault = store.init(master_password).unwrap();
+    store.save(master_password, &vault).unwrap();
+    
+    // 2. Setup mock server at version 3
+    let app = Router::new()
+        .route(
+            "/vault",
+            get(|| async {
+                let mut res_headers = HeaderMap::new();
+                res_headers.insert("X-Vault-Version", 3.into());
+                (StatusCode::OK, res_headers, vec![1, 2, 3]) // Dummy content
+            }),
+        );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server_url = format!("http://{}", addr);
+
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    // 3. Pull and expect rollback error
+    let client = SyncClient::new(server_url.clone(), None);
+    let res = client.pull(5).await;
+    
+    assert!(res.is_err());
+    let err = res.unwrap_err().to_string();
+    assert!(err.contains("rollback detected"));
+    assert!(err.contains("server version (3) is older than local version (5)"));
+}

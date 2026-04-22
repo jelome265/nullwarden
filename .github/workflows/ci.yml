@@ -28,7 +28,9 @@ jobs:
       - name: Deny policy check
         run: cargo deny check
       - name: Coverage gate
-        run: cargo tarpaulin -p nullwarden-core --fail-under 80
+        run: |
+          cargo tarpaulin -p nullwarden-core --fail-under 80
+          cargo tarpaulin -p nullwarden-server --fail-under 60
 
   miri:
     runs-on: ubuntu-latest

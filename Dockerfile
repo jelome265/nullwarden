@@ -1,4 +1,4 @@
-FROM rust:1 AS builder
+FROM rust:1.81.0-bookworm AS builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release -p nullwarden-server
