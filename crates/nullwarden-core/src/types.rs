@@ -3,9 +3,9 @@ use std::fmt;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// A string that is zeroized from memory when dropped.
-/// 
+///
 /// # Warning
-/// 
+///
 /// The `Serialize` implementation for this type emits the **plaintext** string.
 /// This is intended for encrypted storage (e.g. MessagePack vaults) but means
 /// this type must **never** be used as a field in a struct that is serialized

@@ -9,7 +9,6 @@ fn kdf_uses_32_byte_key() {
 }
 
 #[test]
-#[ignore = "timing test — run explicitly with: cargo test -- --ignored"]
 fn kdf_meets_minimum_latency() {
     let salt = [9_u8; SALT_LEN];
     let params = KdfParams::default();
