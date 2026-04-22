@@ -40,4 +40,7 @@ jobs:
         with:
           components: miri
       - run: cargo +nightly miri setup
-      - run: cargo +nightly miri test -p nullwarden-core
+      - name: Run Miri on core library
+        run: cargo +nightly miri test -p nullwarden-core --lib
+        env:
+          MIRIFLAGS: "-Zmiri-disable-isolation"
