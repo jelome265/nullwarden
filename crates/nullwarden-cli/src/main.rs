@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use nullwarden_cli::commands::{
-    add, delete, export, get, init, list, lock, logout, pull, push, register, update,
+    add, delete, export, get, init, list, lock, logout, migrate, pull, push, register, update,
 };
 
 #[derive(Parser)]
@@ -45,6 +45,14 @@ enum Command {
         #[arg(long)]
         output: Option<std::path::PathBuf>,
     },
+    Migrate {
+        #[arg(long)]
+        m_cost: Option<u32>,
+        #[arg(long)]
+        t_cost: Option<u32>,
+        #[arg(long)]
+        p_cost: Option<u32>,
+    },
     Lock,
     Register {
         username: String,
@@ -77,6 +85,7 @@ async fn main() -> anyhow::Result<()> {
         Command::List => list::run().await?,
         Command::Delete { title } => delete::run(title).await?,
         Command::Export { output } => export::run(output).await?,
+        Command::Migrate { m_cost, t_cost, p_cost } => migrate::run(m_cost, t_cost, p_cost).await?,
         Command::Lock => lock::run().await?,
         Command::Register { username, password } => register::run(username, password).await?,
         Command::Push => push::run().await?,
