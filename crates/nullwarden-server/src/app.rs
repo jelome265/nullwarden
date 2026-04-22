@@ -13,24 +13,29 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{
+    governor::GovernorConfigBuilder, key_extractor::GlobalKeyExtractor, GovernorLayer,
+};
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     set_header::SetResponseHeaderLayer,
 };
 
 pub fn build_router(state: SharedState) -> Router {
+    let auth_rate_limit_config = Box::leak(Box::new(
+        GovernorConfigBuilder::default()
+            .key_extractor(GlobalKeyExtractor)
+            .period(std::time::Duration::from_secs(
+                state.config.rate_limit_auth_window_secs,
+            ))
+            .methods(vec![Method::POST])
+            .burst_size(state.config.rate_limit_auth_requests)
+            .finish()
+            .expect("rate limit configuration must be valid"),
+    ));
+
     let auth_rate_limit = GovernorLayer {
-        config: std::sync::Arc::new(
-            GovernorConfigBuilder::default()
-                .period(std::time::Duration::from_secs(
-                    state.config.rate_limit_auth_window_secs,
-                ))
-                .expect("rate limit window must be non-zero")
-                .burst_size(state.config.rate_limit_auth_requests)
-                .finish()
-                .expect("rate limit configuration must be valid"),
-        ),
+        config: auth_rate_limit_config,
     };
 
     // H-09: CORS configuration
