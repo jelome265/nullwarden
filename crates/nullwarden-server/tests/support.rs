@@ -17,21 +17,40 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 #[derive(Default)]
-struct InMemoryState {
-    users_by_name: HashMap<String, StoredUser>,
-    vaults: HashMap<Uuid, StoredVault>,
-    refresh_tokens: HashMap<Uuid, StoredRefreshToken>,
-    blocked_tokens: HashSet<String>,
+pub struct InMemoryState {
+    pub users_by_name: HashMap<String, StoredUser>,
+    pub vaults: HashMap<Uuid, StoredVault>,
+    pub refresh_tokens: HashMap<Uuid, StoredRefreshToken>,
+    pub blocked_tokens: HashSet<String>,
 }
 
 pub async fn test_app() -> Router {
+    test_app_with_limits(5, 600).await
+}
+
+pub async fn test_app_with_state() -> (Router, Arc<Mutex<InMemoryState>>) {
+    test_app_with_limits_and_state(5, 600).await
+}
+
+pub async fn test_app_with_limits(
+    rate_limit_auth_requests: u32,
+    rate_limit_auth_window_secs: u64,
+) -> Router {
+    let (app, _) = test_app_with_limits_and_state(rate_limit_auth_requests, rate_limit_auth_window_secs).await;
+    app
+}
+
+pub async fn test_app_with_limits_and_state(
+    rate_limit_auth_requests: u32,
+    rate_limit_auth_window_secs: u64,
+) -> (Router, Arc<Mutex<InMemoryState>>) {
     let config = Config {
         database_url: None,
         jwt_secret: SecretString("integration-test-jwt-secret-32-bytes".to_string()),
         server_host: "127.0.0.1".to_string(),
         server_port: 0,
-        rate_limit_auth_requests: 5,
-        rate_limit_auth_window_secs: 600,
+        rate_limit_auth_requests,
+        rate_limit_auth_window_secs,
         jwt_access_expire_secs: 900,
         jwt_refresh_expire_days: 7,
         jwt_issuer: "nullwarden-server".to_string(),
@@ -48,7 +67,7 @@ pub async fn test_app() -> Router {
     let state = Arc::new(Mutex::new(InMemoryState::default()));
     let dummy_hash = password::hash_password(&config, "dummy-password").await.unwrap();
 
-    build_router(Arc::new(AppState::init(
+    let app = build_router(Arc::new(AppState::init(
         config,
         Arc::new(InMemoryUserRepository {
             state: state.clone(),
@@ -59,9 +78,13 @@ pub async fn test_app() -> Router {
         Arc::new(InMemoryRefreshTokenRepository {
             state: state.clone(),
         }),
-        Arc::new(InMemoryTokenBlocklistRepository { state }),
+        Arc::new(InMemoryTokenBlocklistRepository {
+            state: state.clone(),
+        }),
         dummy_hash,
-    )))
+    )));
+
+    (app, state)
 }
 
 struct InMemoryUserRepository {

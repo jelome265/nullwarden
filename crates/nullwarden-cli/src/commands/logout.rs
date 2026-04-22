@@ -1,11 +1,12 @@
 use crate::{
     client::auth::AuthClient,
-    config::Config,
+    config::{warn_if_default_server_url, Config},
     session::{clear_access_token, clear_refresh_token, load_access_token, load_refresh_token},
 };
 
 pub async fn run() -> anyhow::Result<()> {
     let config = Config::load()?;
+    warn_if_default_server_url(&config, "logout");
 
     // We try to logout on the server if tokens exist
     let access_token = load_access_token().ok();

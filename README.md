@@ -1633,6 +1633,7 @@ nullwarden/
 │   │   └── tests/
 │   │       ├── auth_integration.rs   # auth flow integration coverage
 │   │       ├── vault_integration.rs  # vault flow and conflict coverage
+│   │       ├── rate_limit_test.rs    # auth rate-limit coverage
 │   │       └── support.rs            # in-memory integration harness
 │   │
 │   └── nullwarden-fuzz/              # Fuzz targets (cargo-fuzz)
