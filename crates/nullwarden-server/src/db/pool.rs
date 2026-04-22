@@ -1,5 +1,7 @@
 use crate::config::Config;
-use crate::db::{RefreshTokenRepository, TokenBlocklistRepository, UserRepository, VaultRepository};
+use crate::db::{
+    RefreshTokenRepository, TokenBlocklistRepository, UserRepository, VaultRepository,
+};
 use std::sync::Arc;
 use uuid::Uuid;
 

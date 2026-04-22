@@ -22,15 +22,22 @@ async fn export_command_writes_reencrypted_backup() {
     store.save(master_password, &vault).unwrap();
 
     let output_path = dir.path().join("backup.nw");
-    export_vault(&vault_path, &output_path, master_password, backup_password).await.unwrap();
+    export_vault(&vault_path, &output_path, master_password, backup_password)
+        .await
+        .unwrap();
 
     // Verify it can be unlocked with backup password
     let backup_store = VaultStore::new(&output_path);
-    let decrypted = backup_store.unlock(backup_password).expect("should unlock with backup password");
+    let decrypted = backup_store
+        .unlock(backup_password)
+        .expect("should unlock with backup password");
     assert_eq!(decrypted.entries.len(), 1);
     assert_eq!(decrypted.entries[0].title, "example");
 
     // Verify it CANNOT be unlocked with original master password (unless they are the same)
     let res = backup_store.unlock(master_password);
-    assert!(res.is_err(), "should NOT unlock with original master password");
+    assert!(
+        res.is_err(),
+        "should NOT unlock with original master password"
+    );
 }

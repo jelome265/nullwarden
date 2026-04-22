@@ -1,5 +1,5 @@
-use nullwarden_core::vault::VaultData;
 use nullwarden_core::error::VaultError;
+use nullwarden_core::vault::VaultData;
 
 #[test]
 fn test_duplicate_entry_error() {
@@ -12,14 +12,14 @@ fn test_duplicate_entry_error() {
             None,
         )
         .expect("first add should succeed");
-    
+
     let res = vault.add_entry(
         "github".to_string(),
         "bob".to_string(),
         "secret2".to_string(),
         None,
     );
-    
+
     match res {
         Err(VaultError::DuplicateEntry) => (),
         _ => panic!("Expected DuplicateEntry error, got {:?}", res),

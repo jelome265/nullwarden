@@ -79,3 +79,58 @@ impl AsRef<[u8; 24]> for VaultNonce {
         &self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_secret_string_zeroize() {
+        let mut s = SecretString("password123".to_string());
+        let len = s.0.len();
+
+        // We do this BEFORE zeroize to make sure we see the data.
+        {
+            let ptr = s.0.as_ptr();
+            let slice_before = unsafe { std::slice::from_raw_parts(ptr, len) };
+            assert_eq!(slice_before, b"password123");
+        }
+
+        s.zeroize();
+
+        // After zeroize, the buffer should be all zeros.
+        // We must re-derive the pointer and length because s.zeroize() for String
+        // may change the internal buffer or its length.
+        {
+            let ptr = s.0.as_ptr();
+            let len = s.0.len();
+            let slice_after = unsafe { std::slice::from_raw_parts(ptr, len) };
+            for &byte in slice_after {
+                assert_eq!(byte, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_vault_key_zeroize() {
+        let mut key = VaultEncryptionKey([0xAA; 32]);
+
+        // Before zeroize
+        {
+            let slice = key.as_ref();
+            for &byte in slice {
+                assert_eq!(byte, 0xAA);
+            }
+        }
+
+        key.zeroize();
+
+        // After zeroize
+        {
+            let slice = key.as_ref();
+            for &byte in slice {
+                assert_eq!(byte, 0);
+            }
+        }
+    }
+}

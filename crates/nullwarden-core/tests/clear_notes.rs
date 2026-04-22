@@ -7,7 +7,7 @@ fn test_clear_notes_persistence() {
     let path = temp.path().join("vault.nwd");
     let store = VaultStore::new(&path);
     let password = "correct-horse-battery-staple-42";
-    
+
     let mut vault = store.init(password).expect("init");
     vault
         .add_entry(
@@ -21,9 +21,14 @@ fn test_clear_notes_persistence() {
 
     // Reopen and clear notes
     let mut vault = store.unlock(password).expect("unlock");
-    assert_eq!(vault.get_entry("github").unwrap().notes, Some("some notes".to_string()));
-    
-    vault.update_entry("github", None, None, Some(None)).expect("update");
+    assert_eq!(
+        vault.get_entry("github").unwrap().notes,
+        Some("some notes".to_string())
+    );
+
+    vault
+        .update_entry("github", None, None, Some(None))
+        .expect("update");
     store.save(password, &vault).expect("save");
 
     // Reopen and verify notes are cleared

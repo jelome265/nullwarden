@@ -114,7 +114,10 @@ fn tighten_windows_acl(path: &std::path::Path) -> anyhow::Result<()> {
         .arg(path)
         .arg("/inheritance:r")
         .arg("/grant:r")
-        .arg(format!("{}:F", std::env::var("USERNAME").unwrap_or_else(|_| "Users".to_string())))
+        .arg(format!(
+            "{}:F",
+            std::env::var("USERNAME").unwrap_or_else(|_| "Users".to_string())
+        ))
         .status()
         .context("failed to invoke icacls for session file ACL hardening")?;
 

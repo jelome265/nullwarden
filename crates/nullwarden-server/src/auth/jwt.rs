@@ -95,7 +95,10 @@ async fn is_token_blocked(state: &SharedState, token: &str) -> anyhow::Result<bo
 }
 
 pub async fn cleanup_blocked_tokens(state: &SharedState) -> anyhow::Result<u64> {
-    Ok(state.token_blocklist.cleanup_expired_tokens(Utc::now()).await?)
+    Ok(state
+        .token_blocklist
+        .cleanup_expired_tokens(Utc::now())
+        .await?)
 }
 
 fn sha256_hash(data: &str) -> String {

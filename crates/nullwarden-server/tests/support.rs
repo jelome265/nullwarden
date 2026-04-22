@@ -38,7 +38,8 @@ pub async fn test_app_with_limits(
     rate_limit_auth_requests: u32,
     rate_limit_auth_window_secs: u64,
 ) -> Router {
-    let (app, _) = test_app_with_limits_and_state(rate_limit_auth_requests, rate_limit_auth_window_secs).await;
+    let (app, _) =
+        test_app_with_limits_and_state(rate_limit_auth_requests, rate_limit_auth_window_secs).await;
     app
 }
 
@@ -67,7 +68,9 @@ pub async fn test_app_with_limits_and_state(
     };
 
     let state = Arc::new(Mutex::new(InMemoryState::default()));
-    let dummy_hash = password::hash_password(&config, "dummy-password").await.unwrap();
+    let dummy_hash = password::hash_password(&config, "dummy-password")
+        .await
+        .unwrap();
 
     let app = build_router(Arc::new(AppState::init(
         config,
@@ -204,14 +207,18 @@ impl RefreshTokenRepository for InMemoryRefreshTokenRepository {
     async fn delete_tokens_for_user(&self, user_id: Uuid) -> Result<u64, sqlx::Error> {
         let mut state = self.state.lock().unwrap();
         let before = state.refresh_tokens.len();
-        state.refresh_tokens.retain(|_, token| token.user_id != user_id);
+        state
+            .refresh_tokens
+            .retain(|_, token| token.user_id != user_id);
         Ok((before - state.refresh_tokens.len()) as u64)
     }
 
     async fn cleanup_expired_tokens(&self, now: DateTime<Utc>) -> Result<u64, sqlx::Error> {
         let mut state = self.state.lock().unwrap();
         let before = state.refresh_tokens.len();
-        state.refresh_tokens.retain(|_, token| token.expires_at >= now);
+        state
+            .refresh_tokens
+            .retain(|_, token| token.expires_at >= now);
         Ok((before - state.refresh_tokens.len()) as u64)
     }
 }
