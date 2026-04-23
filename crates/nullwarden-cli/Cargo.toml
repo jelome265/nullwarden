@@ -8,7 +8,7 @@ anyhow = { workspace = true }
 arboard = "3"
 clap = { version = "4", features = ["derive"] }
 dirs = "5"
-keyring = "2"
+keyring = "3"
 nullwarden-core = { path = "../nullwarden-core" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 rpassword = "7"

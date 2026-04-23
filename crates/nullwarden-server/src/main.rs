@@ -7,8 +7,9 @@ use nullwarden_server::{
     db::users::SqlxUserRepository,
     db::vaults::SqlxVaultRepository,
 };
+use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::Path, sync::Arc};
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 
@@ -27,7 +28,8 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     // Run migrations
-    sqlx::migrate!("./migrations").run(&db).await?;
+    let migrator = Migrator::new(Path::new("./migrations")).await?;
+    migrator.run(&db).await?;
 
     // C-02: Pre-compute dummy hash for timing oracle mitigation
     let dummy_hash = password::hash_password(&config, "dummy_password_never_used_xyz_!@#").await?;
