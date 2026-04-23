@@ -1,7 +1,9 @@
 use crate::db::{RefreshTokenRepository, StoredRefreshToken, TokenBlocklistRepository};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
+use sqlx::query::query;
+use sqlx::row::Row;
+use sqlx_postgres::{PgPool, Postgres};
 use uuid::Uuid;
 
 pub struct SqlxRefreshTokenRepository {
@@ -17,7 +19,7 @@ impl RefreshTokenRepository for SqlxRefreshTokenRepository {
         user_id: Uuid,
         expires_at: DateTime<Utc>,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        query::<Postgres>(
             "INSERT INTO refresh_tokens (id, secret_hash, user_id, expires_at) VALUES ($1, $2, $3, $4)",
         )
         .bind(id)
@@ -31,7 +33,7 @@ impl RefreshTokenRepository for SqlxRefreshTokenRepository {
     }
 
     async fn find_token(&self, id: Uuid) -> Result<Option<StoredRefreshToken>, sqlx::Error> {
-        let row = sqlx::query(
+        let row = query::<Postgres>(
             "SELECT secret_hash, user_id, expires_at FROM refresh_tokens WHERE id = $1",
         )
         .bind(id)
@@ -46,7 +48,7 @@ impl RefreshTokenRepository for SqlxRefreshTokenRepository {
     }
 
     async fn delete_token(&self, id: Uuid) -> Result<(), sqlx::Error> {
-        sqlx::query("DELETE FROM refresh_tokens WHERE id = $1")
+        query::<Postgres>("DELETE FROM refresh_tokens WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -54,7 +56,7 @@ impl RefreshTokenRepository for SqlxRefreshTokenRepository {
     }
 
     async fn delete_tokens_for_user(&self, user_id: Uuid) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM refresh_tokens WHERE user_id = $1")
+        let result = query::<Postgres>("DELETE FROM refresh_tokens WHERE user_id = $1")
             .bind(user_id)
             .execute(&self.pool)
             .await?;
@@ -62,7 +64,7 @@ impl RefreshTokenRepository for SqlxRefreshTokenRepository {
     }
 
     async fn cleanup_expired_tokens(&self, now: DateTime<Utc>) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM refresh_tokens WHERE expires_at < $1")
+        let result = query::<Postgres>("DELETE FROM refresh_tokens WHERE expires_at < $1")
             .bind(now)
             .execute(&self.pool)
             .await?;
@@ -81,7 +83,7 @@ impl TokenBlocklistRepository for SqlxTokenBlocklistRepository {
         token_hash: String,
         expires_at: DateTime<Utc>,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        query::<Postgres>(
             "INSERT INTO token_blocklist (token_hash, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         )
         .bind(token_hash)
@@ -92,7 +94,7 @@ impl TokenBlocklistRepository for SqlxTokenBlocklistRepository {
     }
 
     async fn contains_token(&self, token_hash: &str) -> Result<bool, sqlx::Error> {
-        let row = sqlx::query("SELECT 1 FROM token_blocklist WHERE token_hash = $1")
+        let row = query::<Postgres>("SELECT 1 FROM token_blocklist WHERE token_hash = $1")
             .bind(token_hash)
             .fetch_optional(&self.pool)
             .await?;
@@ -100,7 +102,7 @@ impl TokenBlocklistRepository for SqlxTokenBlocklistRepository {
     }
 
     async fn cleanup_expired_tokens(&self, now: DateTime<Utc>) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM token_blocklist WHERE expires_at < $1")
+        let result = query::<Postgres>("DELETE FROM token_blocklist WHERE expires_at < $1")
             .bind(now)
             .execute(&self.pool)
             .await?;

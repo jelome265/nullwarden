@@ -2,9 +2,10 @@
 name = "nullwarden-fuzz"
 version = "0.1.0"
 edition = "2021"
+license = { workspace = true }
 publish = false
 
 [dependencies]
-nullwarden-core = { path = "../nullwarden-core" }
+nullwarden-core = { version = "0.1.0", path = "../nullwarden-core" }
 libfuzzer-sys = "0.4"
 rmp-serde = "1.1"
