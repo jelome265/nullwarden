@@ -62,7 +62,7 @@ fn load_from_keyring(account: &str) -> anyhow::Result<String> {
 
 fn clear_from_keyring(account: &str) -> anyhow::Result<()> {
     let entry = Entry::new("nullwarden", account).context("failed to create keyring entry")?;
-    let _ = entry.delete_password();
+    let _ = entry.delete_credential();
     Ok(())
 }
 
