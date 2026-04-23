@@ -8,7 +8,7 @@ use nullwarden_server::{
     db::vaults::SqlxVaultRepository,
 };
 use sqlx::migrate::Migrator;
-use sqlx::postgres::PgPoolOptions;
+use sqlx_postgres::PgPoolOptions;
 use std::{net::SocketAddr, path::Path, sync::Arc};
 use tokio::net::TcpListener;
 use tracing::{info, warn};

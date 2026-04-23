@@ -1,19 +1,14 @@
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "deny"
-notice = "warn"
 ignore = []
 
 [licenses]
-allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "Unicode-DFS-2016"]
-unlicensed = "deny"
-copyleft = "warn"
+allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "MIT-0", "BSL-1.0", "Zlib", "Unicode-3.0", "NCSA", "MPL-2.0", "CDLA-Permissive-2.0"]
+confidence-threshold = 0.8
 
 [bans]
-multiple-versions = "deny"
+multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
 

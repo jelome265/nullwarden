@@ -2,6 +2,7 @@
 name = "nullwarden-cli"
 version = "0.1.0"
 edition = "2021"
+license = { workspace = true }
 
 [dependencies]
 anyhow = { workspace = true }
@@ -9,7 +10,7 @@ arboard = "3"
 clap = { version = "4", features = ["derive"] }
 dirs = "5"
 keyring = "3"
-nullwarden-core = { path = "../nullwarden-core" }
+nullwarden-core = { version = "0.1.0", path = "../nullwarden-core" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 rpassword = "7"
 serde = { workspace = true }

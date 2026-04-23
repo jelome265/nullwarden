@@ -1,7 +1,9 @@
 use crate::db::pool::StoredUser;
 use crate::db::UserRepository;
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
+use sqlx::query::query;
+use sqlx::row::Row;
+use sqlx_postgres::{PgPool, Postgres};
 use uuid::Uuid;
 
 pub struct SqlxUserRepository {
@@ -15,7 +17,7 @@ impl UserRepository for SqlxUserRepository {
         username: String,
         password_hash: String,
     ) -> Result<StoredUser, sqlx::Error> {
-        let res = sqlx::query(
+        let res = query::<Postgres>(
             "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, password_hash",
         )
         .bind(&username)
@@ -30,7 +32,7 @@ impl UserRepository for SqlxUserRepository {
     }
 
     async fn find_user(&self, username: &str) -> Result<Option<StoredUser>, sqlx::Error> {
-        let res = sqlx::query("SELECT id, password_hash FROM users WHERE username = $1")
+        let res = query::<Postgres>("SELECT id, password_hash FROM users WHERE username = $1")
             .bind(username)
             .fetch_optional(&self.pool)
             .await?;
@@ -42,7 +44,7 @@ impl UserRepository for SqlxUserRepository {
     }
 
     async fn delete_user(&self, user_id: Uuid) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM users WHERE id = $1")
+        let result = query::<Postgres>("DELETE FROM users WHERE id = $1")
             .bind(user_id)
             .execute(&self.pool)
             .await?;
