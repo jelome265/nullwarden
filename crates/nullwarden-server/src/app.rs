@@ -27,7 +27,7 @@ use tower_http::{
 };
 
 pub fn build_router(state: SharedState) -> anyhow::Result<Router> {
-    let auth_rate_limit_config = Box::leak(Box::new(
+    let auth_rate_limit_config = Arc::new(
         GovernorConfigBuilder::default()
             .key_extractor(TrustedProxyKeyExtractor::new(parse_trusted_proxy_cidrs(
                 &state.config.trusted_proxy_cidrs,
@@ -39,10 +39,10 @@ pub fn build_router(state: SharedState) -> anyhow::Result<Router> {
             .burst_size(state.config.rate_limit_auth_requests)
             .finish()
             .expect("rate limit configuration must be valid"),
-    ));
+    );
 
     let auth_rate_limit = GovernorLayer {
-        config: auth_rate_limit_config,
+        config: auth_rate_limit_config.clone(),
     };
 
     let origins = parse_allowed_origins(&state.config.cors_allowed_origins)?;
