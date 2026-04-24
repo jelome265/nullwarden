@@ -110,19 +110,22 @@ fn clear_from_file(account: &str) -> anyhow::Result<()> {
 
 #[cfg(windows)]
 fn tighten_windows_acl(path: &std::path::Path) -> anyhow::Result<()> {
-    let status = Command::new("icacls")
+    let username = whoami::username();
+    if username.trim().is_empty() {
+        anyhow::bail!("failed to determine current username for session file ACL hardening");
+    }
+
+    let output = Command::new(r"C:\Windows\System32\icacls.exe")
         .arg(path)
         .arg("/inheritance:r")
         .arg("/grant:r")
-        .arg(format!(
-            "{}:F",
-            std::env::var("USERNAME").unwrap_or_else(|_| "Users".to_string())
-        ))
-        .status()
+        .arg(format!("{username}:F"))
+        .output()
         .context("failed to invoke icacls for session file ACL hardening")?;
 
-    if !status.success() {
-        anyhow::bail!("icacls failed while securing session file permissions");
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("icacls failed while securing session file permissions: {stderr}");
     }
 
     Ok(())

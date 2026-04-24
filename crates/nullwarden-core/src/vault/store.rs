@@ -2,10 +2,14 @@ use crate::{
     error::VaultError,
     kdf::{generate_salt, KdfParams},
     types::VaultNonce,
-    vault::{header::VaultHeader, VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer},
+    vault::{
+        header::{VaultHeader, VaultHeaderDecodeError},
+        VaultCipher, VaultData, VaultKeyDeriver, VaultSerializer,
+    },
 };
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -35,7 +39,8 @@ impl VaultStore {
 
     pub fn init(&self, password: &str) -> Result<VaultData, VaultError> {
         let data = VaultData::default();
-        self.save(password, &data)?;
+        let bytes = self.serialize_vault(password, &data)?;
+        create_new_file(&self.path, &bytes)?;
         Ok(data)
     }
 
@@ -45,7 +50,13 @@ impl VaultStore {
     }
 
     pub fn unlock_bytes(&self, password: &str, bytes: &[u8]) -> Result<VaultData, VaultError> {
-        let (header, offset) = VaultHeader::decode(bytes).ok_or(VaultError::InvalidFormat)?;
+        let (header, offset) = match VaultHeader::decode(bytes) {
+            Ok(value) => value,
+            Err(VaultHeaderDecodeError::InvalidFormat) => return Err(VaultError::InvalidFormat),
+            Err(VaultHeaderDecodeError::UnsupportedFormatVersion(version)) => {
+                return Err(VaultError::UnsupportedFormatVersion(version))
+            }
+        };
         let params = KdfParams {
             m_cost: header.m_cost,
             t_cost: header.t_cost,
@@ -58,6 +69,11 @@ impl VaultStore {
     }
 
     pub fn save(&self, password: &str, data: &VaultData) -> Result<(), VaultError> {
+        let file = self.serialize_vault(password, data)?;
+        atomic_write(&self.path, &file)
+    }
+
+    fn serialize_vault(&self, password: &str, data: &VaultData) -> Result<Vec<u8>, VaultError> {
         let salt = generate_salt();
         let key = VaultKeyDeriver::derive(password, &salt, self.params)?;
         let plaintext = VaultSerializer::serialize(data)?;
@@ -74,7 +90,7 @@ impl VaultStore {
 
         let mut file = header.encode();
         file.extend_from_slice(&ciphertext);
-        atomic_write(&self.path, &file)
+        Ok(file)
     }
 }
 
@@ -85,7 +101,6 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
     let tmp_path = path.with_extension("tmp");
 
     let write_result: Result<(), VaultError> = (|| {
-        use std::io::Write;
         let mut file = fs::File::create(&tmp_path)?;
         file.write_all(data)?;
         file.sync_all()?;
@@ -99,6 +114,27 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<(), VaultError> {
     }
 
     fs::rename(&tmp_path, path)?;
+
+    #[cfg(unix)]
+    if let Some(parent) = path.parent() {
+        let dir = fs::File::open(parent)?;
+        dir.sync_all()?;
+    }
+
+    Ok(())
+}
+
+fn create_new_file(path: &Path, data: &[u8]) -> Result<(), VaultError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(data)?;
+    file.sync_all()?;
 
     #[cfg(unix)]
     if let Some(parent) = path.parent() {

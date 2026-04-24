@@ -108,7 +108,7 @@ impl SyncClient {
     async fn send_with_retry(
         &self,
         request: reqwest::RequestBuilder,
-        _operation: &str,
+        operation: &'static str,
     ) -> anyhow::Result<reqwest::Response> {
         for attempt in 0..3u32 {
             let cloned = request
@@ -121,7 +121,7 @@ impl SyncClient {
                     sleep(Duration::from_millis(250 * (1 << attempt))).await;
                 }
                 Err(err) => {
-                    return Err(map_network_error(err, &self.base_url));
+                    return Err(map_network_error(err, &self.base_url, operation));
                 }
             }
         }
@@ -134,10 +134,15 @@ fn should_retry(err: &reqwest::Error) -> bool {
     err.is_connect() || err.is_timeout() || err.is_request()
 }
 
-fn map_network_error(err: reqwest::Error, base_url: &str) -> anyhow::Error {
+fn map_network_error(
+    err: reqwest::Error,
+    base_url: &str,
+    operation: &'static str,
+) -> anyhow::Error {
     if should_retry(&err) {
         return crate::error::CliError::ServerUnavailable {
             url: base_url.to_string(),
+            operation,
             source: err,
         }
         .into();

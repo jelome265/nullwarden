@@ -1,6 +1,6 @@
 use crate::{
     client::sync::SyncClient,
-    config::{warn_if_default_server_url, Config},
+    config::{ensure_non_default_server_url, warn_if_default_server_url, Config},
     error::CliError,
     input::{prompt_choice, prompt_password},
     session::load_access_token,
@@ -12,6 +12,7 @@ use nullwarden_core::vault::VaultStore;
 pub async fn run() -> anyhow::Result<()> {
     let config = Config::load()?;
     warn_if_default_server_url(&config, "push");
+    ensure_non_default_server_url(&config, "push")?;
     let token = load_access_token()?;
     let mut sync_state = SyncState::load(&config.vault_path)?;
 
@@ -23,6 +24,7 @@ pub async fn run() -> anyhow::Result<()> {
 
     match res {
         Ok(new_version) => {
+            verify_remote_matches_local(&client, &config.vault_path, new_version).await?;
             sync_state.last_version = new_version;
             sync_state.save(&config.vault_path)?;
             println!("Vault push completed (version {})", new_version);
@@ -56,6 +58,8 @@ pub async fn run() -> anyhow::Result<()> {
 
                         println!("Force pushing local vault...");
                         let new_version = client.push(&config.vault_path, 0, true).await?;
+                        verify_remote_matches_local(&client, &config.vault_path, new_version)
+                            .await?;
                         sync_state.last_version = new_version;
                         sync_state.save(&config.vault_path)?;
                         println!("Vault push completed (version {})", new_version);
@@ -90,6 +94,7 @@ pub async fn run() -> anyhow::Result<()> {
 
                     println!("Force pushing local vault...");
                     let new_version = client.push(&config.vault_path, 0, true).await?;
+                    verify_remote_matches_local(&client, &config.vault_path, new_version).await?;
                     sync_state.last_version = new_version;
                     sync_state.save(&config.vault_path)?;
                     println!("Vault push completed (version {})", new_version);
@@ -153,5 +158,22 @@ async fn apply_remote_bytes(
         .context("failed to write local vault")?;
 
     println!("Downloaded and validated remote vault version {}", version);
+    Ok(())
+}
+
+async fn verify_remote_matches_local(
+    client: &SyncClient,
+    vault_path: &std::path::Path,
+    expected_version: u64,
+) -> anyhow::Result<()> {
+    let local = tokio::fs::read(vault_path)
+        .await
+        .context("failed to read local vault for post-push verification")?;
+    let (remote_version, remote) = client.pull(expected_version).await?;
+    if remote_version != expected_version || remote != local {
+        anyhow::bail!(
+            "post-push verification failed: remote vault content does not match local vault"
+        );
+    }
     Ok(())
 }

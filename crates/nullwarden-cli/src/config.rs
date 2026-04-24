@@ -30,6 +30,20 @@ pub fn warn_if_default_server_url(config: &Config, command: &str) {
     }
 }
 
+pub fn ensure_non_default_server_url(config: &Config, command: &str) -> anyhow::Result<()> {
+    if config.server_url == DEFAULT_SERVER_URL
+        && std::env::var("NULLWARDEN_ALLOW_DEFAULT_SERVER_URL")
+            .ok()
+            .as_deref()
+            != Some("1")
+    {
+        anyhow::bail!(
+            "`{command}` refuses to use the default server URL ({DEFAULT_SERVER_URL}). Set `server_url` explicitly or set NULLWARDEN_ALLOW_DEFAULT_SERVER_URL=1 to override."
+        );
+    }
+    Ok(())
+}
+
 impl Config {
     pub fn load() -> anyhow::Result<Self> {
         let config_path = config_path();

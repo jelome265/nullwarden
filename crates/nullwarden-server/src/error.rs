@@ -8,6 +8,7 @@ use thiserror::Error;
 use tracing::error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum AppError {
     #[error("Authentication failed: {0}")]
     Unauthorized(String),
@@ -21,6 +22,8 @@ pub enum AppError {
     NotFound(String),
     #[error("Invalid input: {0}")]
     BadRequest(String),
+    #[error("Too many requests: {0}")]
+    TooManyRequests(String),
 }
 
 impl IntoResponse for AppError {
@@ -29,14 +32,16 @@ impl IntoResponse for AppError {
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
             AppError::Internal(err) => {
-                error!("Internal server error: {:?}", err);
+                let _ = err;
+                error!("internal server error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Internal server error".to_string(),
                 )
             }
             AppError::Database(err) => {
-                error!("Database error: {:?}", err);
+                let _ = err;
+                error!("database error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Internal server error".to_string(),
@@ -44,6 +49,7 @@ impl IntoResponse for AppError {
             }
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
         };
 
         let body = Json(json!({

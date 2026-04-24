@@ -6,14 +6,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Enable RLS
-ALTER TABLE refresh_tokens ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can access own tokens"
-  ON refresh_tokens
-  FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+ALTER TABLE refresh_tokens DISABLE ROW LEVEL SECURITY;
 
 -- H-01: Indices for performance and cleanup
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);

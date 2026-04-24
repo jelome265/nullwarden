@@ -2,7 +2,8 @@ use crate::config::Config;
 use crate::db::{
     RefreshTokenRepository, TokenBlocklistRepository, UserRepository, VaultRepository,
 };
-use std::sync::Arc;
+use governor::{DefaultKeyedRateLimiter, Quota, RateLimiter};
+use std::{num::NonZeroU32, sync::Arc};
 use uuid::Uuid;
 
 pub type SharedState = Arc<AppState>;
@@ -26,6 +27,8 @@ pub struct AppState {
     pub refresh_tokens: Arc<dyn RefreshTokenRepository>,
     pub token_blocklist: Arc<dyn TokenBlocklistRepository>,
     pub dummy_hash: String, // C-02: To prevent login timing oracle
+    pub vault_rate_limiter: DefaultKeyedRateLimiter<Uuid>,
+    pub force_push_rate_limiter: DefaultKeyedRateLimiter<Uuid>,
 }
 
 impl AppState {
@@ -37,6 +40,14 @@ impl AppState {
         token_blocklist: Arc<dyn TokenBlocklistRepository>,
         dummy_hash: String,
     ) -> Self {
+        let vault_rate_limiter = RateLimiter::keyed(Quota::per_minute(
+            NonZeroU32::new(config.rate_limit_vault_requests_per_minute)
+                .expect("vault rate limit must be non-zero"),
+        ));
+        let force_push_rate_limiter = RateLimiter::keyed(Quota::per_hour(
+            NonZeroU32::new(config.rate_limit_force_pushes_per_hour)
+                .expect("force-push rate limit must be non-zero"),
+        ));
         Self {
             config,
             users,
@@ -44,6 +55,8 @@ impl AppState {
             refresh_tokens,
             token_blocklist,
             dummy_hash,
+            vault_rate_limiter,
+            force_push_rate_limiter,
         }
     }
 }

@@ -6,9 +6,4 @@ CREATE TABLE IF NOT EXISTS token_blocklist (
 CREATE INDEX IF NOT EXISTS idx_token_blocklist_expires_at
     ON token_blocklist(expires_at);
 
-ALTER TABLE token_blocklist ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "No direct user access"
-  ON token_blocklist
-  FOR ALL
-  USING (false); -- Only accessible via service_role bypass
+ALTER TABLE token_blocklist DISABLE ROW LEVEL SECURITY;

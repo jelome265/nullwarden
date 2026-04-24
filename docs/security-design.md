@@ -31,4 +31,4 @@
 
 ## 3. Communication Security
 - **TLS 1.3:** Enforced for all client-server communication.
-- **JWT:** Used for session management with short lifetimes and mandatory refresh token rotation.
+- **JWT:** Used for session management with short lifetimes and mandatory refresh token rotation
