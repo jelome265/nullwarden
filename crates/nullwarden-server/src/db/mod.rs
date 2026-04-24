@@ -28,7 +28,9 @@ pub trait VaultRepository: Send + Sync {
         blob: Vec<u8>,
         expected_version: Option<u64>,
         force: bool,
+        history_retention_days: i64,
     ) -> Result<StoredVault, sqlx::Error>;
+    async fn purge_history(&self, user_id: Uuid) -> Result<u64, sqlx::Error>;
 }
 
 #[derive(Debug, Clone)]

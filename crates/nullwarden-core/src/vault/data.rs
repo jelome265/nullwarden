@@ -1,8 +1,13 @@
 use crate::error::VaultError;
-use crate::types::SecretString;
+use crate::types::{secret_string_wire, SecretString};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+const MAX_TITLE_LEN: usize = 256;
+const MAX_USERNAME_LEN: usize = 256;
+const MAX_PASSWORD_LEN: usize = 1024;
+const MAX_NOTES_LEN: usize = 8 * 1024;
 
 #[derive(Debug, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultEntry {
@@ -10,14 +15,13 @@ pub struct VaultEntry {
     pub id: Uuid,
     pub title: String,
     pub username: String,
+    #[serde(with = "secret_string_wire")]
     pub password: SecretString,
     pub notes: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultData {
-    #[zeroize(skip)]
-    pub version: u64,
     pub entries: Vec<VaultEntry>,
 }
 
@@ -29,6 +33,7 @@ impl VaultData {
         password: String,
         notes: Option<String>,
     ) -> Result<Uuid, VaultError> {
+        validate_entry_fields(&title, &username, &password, notes.as_deref())?;
         if self.entries.iter().any(|entry| entry.title == title) {
             return Err(VaultError::DuplicateEntry);
         }
@@ -40,7 +45,6 @@ impl VaultData {
             password: SecretString(password),
             notes,
         });
-        self.version = self.version.saturating_add(1);
         Ok(id)
     }
 
@@ -61,6 +65,14 @@ impl VaultData {
             .find(|entry| entry.title == title)
             .ok_or(VaultError::EntryNotFound)?;
 
+        let next_username = username.as_deref().unwrap_or(entry.username.as_str());
+        let next_password = password.as_deref().unwrap_or(entry.password.0.as_str());
+        let next_notes = notes
+            .as_ref()
+            .map(|notes| notes.as_deref())
+            .unwrap_or(entry.notes.as_deref());
+        validate_entry_fields(title, next_username, next_password, next_notes)?;
+
         if let Some(u) = username {
             entry.username = u;
         }
@@ -70,7 +82,6 @@ impl VaultData {
         if let Some(n) = notes {
             entry.notes = n;
         }
-        self.version = self.version.saturating_add(1);
         Ok(())
     }
 
@@ -80,7 +91,37 @@ impl VaultData {
         if self.entries.len() == before {
             return Err(VaultError::EntryNotFound);
         }
-        self.version = self.version.saturating_add(1);
         Ok(())
     }
+}
+
+fn validate_entry_fields(
+    title: &str,
+    username: &str,
+    password: &str,
+    notes: Option<&str>,
+) -> Result<(), VaultError> {
+    if title.is_empty() || title.chars().count() > MAX_TITLE_LEN {
+        return Err(VaultError::Serialization(format!(
+            "title must be between 1 and {MAX_TITLE_LEN} characters"
+        )));
+    }
+    if username.is_empty() || username.chars().count() > MAX_USERNAME_LEN {
+        return Err(VaultError::Serialization(format!(
+            "username must be between 1 and {MAX_USERNAME_LEN} characters"
+        )));
+    }
+    if password.is_empty() || password.chars().count() > MAX_PASSWORD_LEN {
+        return Err(VaultError::Serialization(format!(
+            "password must be between 1 and {MAX_PASSWORD_LEN} characters"
+        )));
+    }
+    if let Some(notes) = notes {
+        if notes.chars().count() > MAX_NOTES_LEN {
+            return Err(VaultError::Serialization(format!(
+                "notes must be at most {MAX_NOTES_LEN} characters"
+            )));
+        }
+    }
+    Ok(())
 }

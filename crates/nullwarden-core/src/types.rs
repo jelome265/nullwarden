@@ -33,7 +33,7 @@ impl Serialize for SecretString {
     where
         S: Serializer,
     {
-        self.0.serialize(serializer)
+        serializer.serialize_str("***REDACTED***")
     }
 }
 
@@ -51,7 +51,7 @@ impl Serialize for SecretBytes {
     where
         S: Serializer,
     {
-        self.0.serialize(serializer)
+        serializer.serialize_bytes(b"***REDACTED***")
     }
 }
 
@@ -85,6 +85,25 @@ pub struct VaultNonce(pub [u8; 24]);
 impl AsRef<[u8; 24]> for VaultNonce {
     fn as_ref(&self) -> &[u8; 24] {
         &self.0
+    }
+}
+
+pub mod secret_string_wire {
+    use super::SecretString;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(value: &SecretString, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&value.0)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SecretString, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(SecretString)
     }
 }
 

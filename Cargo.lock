@@ -1848,6 +1848,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "toml",
+ "whoami",
  "zxcvbn",
 ]
 
@@ -1890,6 +1891,7 @@ dependencies = [
  "envy",
  "governor",
  "hex",
+ "ipnet",
  "jsonwebtoken",
  "nullwarden-core",
  "reqwest",
@@ -1898,6 +1900,7 @@ dependencies = [
  "sha2",
  "sqlx-core",
  "sqlx-postgres",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "tower 0.4.13",
@@ -3674,6 +3677,7 @@ checksum = "5d4a4db5077702ca3015d3d02d74974948aba2ad9e12ab7df718ee64ccd7e97d"
 dependencies = [
  "libredox",
  "wasite",
+ "web-sys",
 ]
 
 [[package]]

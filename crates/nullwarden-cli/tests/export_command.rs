@@ -41,3 +41,17 @@ async fn export_command_writes_reencrypted_backup() {
         "should NOT unlock with original master password"
     );
 }
+
+#[tokio::test]
+async fn export_command_rejects_weak_backup_password() {
+    let dir = tempdir().unwrap();
+    let vault_path = dir.path().join("vault.nw");
+    let output_path = dir.path().join("backup.nw");
+    let store = VaultStore::new(&vault_path);
+    let master_password = "enterprise-grade-password-123!";
+
+    store.init(master_password).unwrap();
+
+    let result = export_vault(&vault_path, &output_path, master_password, "1234").await;
+    assert!(result.is_err());
+}

@@ -38,6 +38,7 @@ pub async fn export_vault(
     master_password: &str,
     backup_password: &str,
 ) -> anyhow::Result<()> {
+    validate_password_strength(backup_password)?;
     let store = VaultStore::new(vault_path);
     let data = store
         .unlock(master_password)

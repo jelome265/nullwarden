@@ -1,6 +1,6 @@
 use crate::db::pool::SharedState;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -22,7 +22,7 @@ pub fn issue_access_token(state: &SharedState, user_id: Uuid) -> anyhow::Result<
         aud: state.config.jwt_audience.clone(),
     };
     Ok(encode(
-        &Header::default(),
+        &Header::new(Algorithm::HS256),
         &claims,
         &EncodingKey::from_secret(state.config.jwt_secret.0.as_bytes()),
     )?)
@@ -34,7 +34,7 @@ pub async fn validate_access_token(state: &SharedState, token: &str) -> anyhow::
         anyhow::bail!("token is blocked");
     }
 
-    let mut validation = Validation::default();
+    let mut validation = Validation::new(Algorithm::HS256);
     validation.set_audience(&[state.config.jwt_audience.as_str()]);
     validation.set_issuer(&[state.config.jwt_issuer.as_str()]);
 
@@ -59,7 +59,7 @@ pub async fn validate_access_token(state: &SharedState, token: &str) -> anyhow::
 }
 
 pub async fn block_token(state: &SharedState, token: &str) -> anyhow::Result<()> {
-    let mut validation = Validation::default();
+    let mut validation = Validation::new(Algorithm::HS256);
     validation.set_audience(&[state.config.jwt_audience.as_str()]);
     validation.set_issuer(&[state.config.jwt_issuer.as_str()]);
 

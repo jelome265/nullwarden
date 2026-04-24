@@ -27,6 +27,12 @@ jobs:
         run: cargo audit
       - name: Deny policy check
         run: cargo deny check
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
       - name: Coverage gate
         run: |
           cargo tarpaulin -p nullwarden-core --fail-under 80

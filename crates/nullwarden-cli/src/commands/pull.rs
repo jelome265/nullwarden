@@ -25,6 +25,10 @@ pub async fn run() -> anyhow::Result<()> {
         .unlock_bytes(&master_password, &bytes)
         .context("failed to decrypt downloaded vault (integrity check failed)")?;
 
+    create_local_backup(&config.vault_path)
+        .await
+        .context("failed to create a local backup before overwrite")?;
+
     tokio::fs::write(&config.vault_path, &bytes)
         .await
         .context("failed to write local vault")?;
@@ -33,5 +37,20 @@ pub async fn run() -> anyhow::Result<()> {
     sync_state.save(&config.vault_path)?;
 
     println!("Vault pull completed (version {})", version);
+    Ok(())
+}
+
+async fn create_local_backup(vault_path: &std::path::Path) -> anyhow::Result<()> {
+    if !tokio::fs::try_exists(vault_path).await? {
+        return Ok(());
+    }
+
+    let suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs();
+    let backup_path = vault_path.with_extension(format!("bak.{suffix}"));
+    tokio::fs::copy(vault_path, &backup_path)
+        .await
+        .with_context(|| format!("failed to write backup to {}", backup_path.display()))?;
     Ok(())
 }

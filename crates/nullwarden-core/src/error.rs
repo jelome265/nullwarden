@@ -1,9 +1,12 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum VaultError {
     #[error("invalid vault format")]
     InvalidFormat,
+    #[error("unsupported vault format version: {0}")]
+    UnsupportedFormatVersion(u8),
     #[error("decryption failed")]
     DecryptionFailed,
     #[error("serialization failed: {0}")]

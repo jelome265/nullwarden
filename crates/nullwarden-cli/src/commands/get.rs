@@ -18,10 +18,22 @@ pub async fn run(title: String, print: bool) -> anyhow::Result<()> {
         println!("password: {}", entry.password.0);
     } else {
         use arboard::Clipboard;
+        use tokio::time::{sleep, Duration};
         let mut cb = Clipboard::new().context("failed to access clipboard")?;
         cb.set_text(entry.password.0.clone())
             .context("failed to copy to clipboard")?;
-        println!("Password copied to clipboard. If you use a clipboard manager, clear its history after use.");
+        println!("Password copied to clipboard. Clearing it in 30 seconds if unchanged.");
+        sleep(Duration::from_secs(30)).await;
+        let mut cb = Clipboard::new().context("failed to re-open clipboard")?;
+        if cb.get_text().ok().as_deref() == Some(entry.password.0.as_str()) {
+            cb.set_text(String::new())
+                .context("failed to clear clipboard after timeout")?;
+            println!("Clipboard cleared.");
+        } else {
+            println!(
+                "Clipboard changed before timeout; leaving current clipboard contents intact."
+            );
+        }
     }
 
     if let Some(notes) = &entry.notes {

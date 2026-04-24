@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum CliError {
     #[error("Configuration error: {0}")]
     Config(String),
@@ -16,8 +17,12 @@ pub enum CliError {
     Vault(#[from] nullwarden_core::VaultError),
     #[error("Sync conflict: remote vault has been updated by another device")]
     SyncConflict,
-    #[error("Cannot reach NullWarden server at {url}. Is the server running? {source}")]
-    ServerUnavailable { url: String, source: reqwest::Error },
+    #[error("Cannot reach NullWarden server at {url} during `{operation}`. Check your configured `server_url`, network path, TLS settings, and whether the server is reachable. {source}")]
+    ServerUnavailable {
+        url: String,
+        operation: &'static str,
+        source: reqwest::Error,
+    },
     #[error("Input error: {0}")]
     Input(String),
     #[error("Keyring error: {0}")]

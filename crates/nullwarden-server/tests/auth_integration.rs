@@ -16,6 +16,7 @@ async fn json_request(
     let mut builder = Request::builder()
         .method(method)
         .uri(uri)
+        .header("X-Forwarded-For", "198.51.100.20")
         .header(header::CONTENT_TYPE, "application/json");
 
     if let Some(token) = bearer {

@@ -54,6 +54,10 @@ pub async fn test_app_with_limits_and_state(
         server_port: 0,
         rate_limit_auth_requests,
         rate_limit_auth_window_secs,
+        cors_allowed_origins: "http://127.0.0.1:3000".to_string(),
+        rate_limit_vault_requests_per_minute: 60,
+        rate_limit_force_pushes_per_hour: 3,
+        trusted_proxy_cidrs: "198.51.100.0/24".to_string(),
         jwt_access_expire_secs: 900,
         jwt_refresh_expire_days: 7,
         jwt_issuer: "nullwarden-server".to_string(),
@@ -65,6 +69,8 @@ pub async fn test_app_with_limits_and_state(
         tls_key_path: None,
         db_max_connections: 1,
         cleanup_interval_secs: 3600,
+        vault_history_retention_days: 30,
+        health_check_token: None,
     };
 
     let state = Arc::new(Mutex::new(InMemoryState::default()));
@@ -87,7 +93,8 @@ pub async fn test_app_with_limits_and_state(
             state: state.clone(),
         }),
         dummy_hash,
-    )));
+    )))
+    .unwrap();
 
     (app, state)
 }
@@ -142,6 +149,7 @@ impl VaultRepository for InMemoryVaultRepository {
         blob: Vec<u8>,
         expected_version: Option<u64>,
         force: bool,
+        _history_retention_days: i64,
     ) -> Result<StoredVault, sqlx::Error> {
         let mut state = self.state.lock().unwrap();
         let current = state.vaults.get(&user_id).cloned();
@@ -165,6 +173,10 @@ impl VaultRepository for InMemoryVaultRepository {
 
         state.vaults.insert(user_id, stored.clone());
         Ok(stored)
+    }
+
+    async fn purge_history(&self, _user_id: Uuid) -> Result<u64, sqlx::Error> {
+        Ok(0)
     }
 }
 

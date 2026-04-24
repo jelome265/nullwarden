@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let app = build_router(state);
+    let app = build_router(state)?;
     let addr: SocketAddr = format!("{}:{}", config.server_host, config.server_port).parse()?;
 
     info!("nullwarden-server listening on {}", addr);
@@ -77,12 +77,16 @@ async fn main() -> anyhow::Result<()> {
         use axum_server::tls_rustls::RustlsConfig;
         let tls_config = RustlsConfig::from_pem_file(cert_path, key_path).await?;
         axum_server::bind_rustls(addr, tls_config)
-            .serve(app.into_make_service())
+            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
             .await?;
     } else {
         warn!("TLS not configured (missing TLS_CERT_PATH or TLS_KEY_PATH). Running in plain HTTP mode — INSECURE!");
         let listener = TcpListener::bind(addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await?;
     }
 
     Ok(())

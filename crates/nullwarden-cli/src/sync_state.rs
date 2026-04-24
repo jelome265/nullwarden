@@ -2,6 +2,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -26,7 +27,14 @@ impl SyncState {
             fs::create_dir_all(parent)?;
         }
         let raw = serde_json::to_string_pretty(self)?;
-        fs::write(path, raw).context("failed to save sync state")?;
+        let tmp_path = path.with_extension("sync.tmp");
+        let mut file =
+            fs::File::create(&tmp_path).context("failed to create sync state temp file")?;
+        file.write_all(raw.as_bytes())
+            .context("failed to write sync state temp file")?;
+        file.sync_all()
+            .context("failed to sync sync state temp file")?;
+        fs::rename(&tmp_path, &path).context("failed to atomically replace sync state")?;
         Ok(())
     }
 }

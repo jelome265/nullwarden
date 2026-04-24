@@ -32,6 +32,7 @@ pub async fn register(
     Json(payload): Json<AuthRequest>,
 ) -> AppResult<StatusCode> {
     validate_username(&payload.username)?;
+    let username = payload.username.clone();
     let hash = password::hash_password(&state.config, &payload.password).await?;
 
     state
@@ -46,6 +47,8 @@ pub async fn register(
             }
             AppError::Database(e)
         })?;
+
+    tracing::info!(username = %username, "user registered");
 
     Ok(StatusCode::CREATED)
 }
@@ -66,6 +69,7 @@ pub async fn login(
     let ok = password::verify_password(hash, &payload.password).await?;
 
     if !ok || user_opt.is_none() {
+        tracing::warn!(username = %payload.username, "login failed");
         return Err(AppError::Unauthorized(
             "Invalid username or password".to_string(),
         ));
@@ -74,6 +78,8 @@ pub async fn login(
     let user = user_opt.unwrap();
     let access_token = jwt::issue_access_token(&state, user.id)?;
     let refresh_token = token::issue_refresh_token(&state, user.id).await?;
+
+    tracing::info!(user_id = %user.id, "user logged in");
 
     Ok(Json(AuthResponse {
         access_token,
@@ -101,16 +107,18 @@ pub async fn logout(
     headers: HeaderMap,
     Json(payload): Json<RefreshRequest>,
 ) -> AppResult<StatusCode> {
-    if let Some(auth_header) = headers.get(axum::http::header::AUTHORIZATION) {
-        if let Ok(auth_str) = auth_header.to_str() {
-            if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                let _ = jwt::block_token(&state, token).await;
-            }
-        }
+    let auth_token = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|auth_header| auth_header.to_str().ok())
+        .and_then(|auth_str| auth_str.strip_prefix("Bearer "));
+
+    let user_id = token::consume_refresh_token(&state, &payload.refresh_token).await?;
+
+    if let Some(token) = auth_token {
+        jwt::block_token(&state, token).await?;
     }
 
-    // Best effort revocation
-    let _ = token::consume_refresh_token(&state, &payload.refresh_token).await;
+    tracing::info!(user_id = %user_id, "user logged out");
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -121,6 +129,7 @@ pub async fn delete_user(
 ) -> AppResult<StatusCode> {
     token::revoke_all_user_tokens(&state, user.id).await?;
     state.users.delete_user(user.id).await?;
+    tracing::warn!(user_id = %user.id, "user deleted");
     Ok(StatusCode::NO_CONTENT)
 }
 

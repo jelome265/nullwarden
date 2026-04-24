@@ -5,7 +5,9 @@ use zxcvbn::zxcvbn;
 pub fn prompt_password(label: &str) -> anyhow::Result<String> {
     print!("{label}: ");
     io::stdout().flush()?;
-    let password = rpassword::read_password()?;
+    let password = rpassword::read_password()?
+        .trim_end_matches(['\r', '\n'])
+        .to_string();
     if password.is_empty() {
         bail!("empty password is not allowed");
     }
@@ -13,7 +15,7 @@ pub fn prompt_password(label: &str) -> anyhow::Result<String> {
 }
 
 pub fn validate_password_strength(password: &str) -> anyhow::Result<()> {
-    let estimate = zxcvbn(password, &[]);
+    let estimate = zxcvbn(password, &["nullwarden", "vault", "password", "backup"]);
     if (estimate.score() as u8) < 3 {
         bail!(
             "password is too weak (score: {}/4). use a longer, more complex passphrase.",
