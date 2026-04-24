@@ -23,5 +23,5 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
-axum = "0.7"
+axum = "0.7" # dev only
 tokio = { workspace = true, features = ["full"] }
