@@ -17,7 +17,7 @@ pub async fn log_request_id(request: Request, next: Next) -> Response {
     let request_id = request
         .extensions()
         .get::<RequestId>()
-        .and_then(|id| id.header_value().to_str().ok())
+        .and_then(|id: &RequestId| id.header_value().to_str().ok())
         .unwrap_or("unknown")
         .to_string();
 
