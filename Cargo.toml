@@ -18,9 +18,6 @@ serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "1", features = ["serde", "v4"] }
-
-[patch.crates-io]
-windows-sys = { version = "0.61.2" }
-webpki-roots = { version = "1.0.7" }
-windows-targets = { version = "0.53.5" }
+windows-sys = "0.61.2"
+windows-targets = "0.53.5"
 

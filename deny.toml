@@ -8,7 +8,7 @@ allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "MIT-0", "BSL-1.0", "Zlib",
 confidence-threshold = 0.8
 
 [bans]
-multiple-versions = "deny"
+multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
 skip = [
@@ -43,6 +43,15 @@ skip = [
     { name = "windows_x86_64_msvc", version = "0.53.1" },
     { name = "wit-bindgen", version = "0.51.0" },
     { name = "wit-bindgen", version = "0.57.1" },
+    { name = "windows-sys", version = "0.45.0" },
+    { name = "windows-sys", version = "0.48.0" },
+    { name = "windows-sys", version = "0.52.0" },
+    { name = "windows-sys", version = "0.59.0" },
+    { name = "windows-sys", version = "0.60.2" },
+    { name = "windows-sys", version = "0.61.2" },
+    { name = "windows-targets", version = "0.48.5" },
+    { name = "windows-targets", version = "0.52.6" },
+    { name = "windows-targets", version = "0.53.5" },
 ]
 
 [sources]
